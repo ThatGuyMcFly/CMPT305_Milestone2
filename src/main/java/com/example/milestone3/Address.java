@@ -1,25 +1,16 @@
-package com.example.milestone2;
+package com.example.milestone3;
 
 import java.util.Objects;
 
-public class Address {
-    private final String suite;
-
-    private final String houseNumber;
-
-    private final String street;
-
+public record Address(String suite, String houseNumber, String street) {
     /**
      * Constructor for the Address Class
      *
-     * @param suite - the address suite
+     * @param suite       - the address suite
      * @param houseNumber - the address's house number
-     * @param street - the address's street
+     * @param street      - the address's street
      */
-    public Address(String suite, String houseNumber, String street) {
-        this.suite = suite;
-        this.houseNumber = houseNumber;
-        this.street = street;
+    public Address {
     }
 
     /**
@@ -27,7 +18,8 @@ public class Address {
      *
      * @return the address's suite
      */
-    public String getSuite() {
+    @Override
+    public String suite() {
         return this.suite;
     }
 
@@ -36,7 +28,8 @@ public class Address {
      *
      * @return the address's house number
      */
-    public String getHouseNumber() {
+    @Override
+    public String houseNumber() {
         return this.houseNumber;
     }
 
@@ -45,7 +38,10 @@ public class Address {
      *
      * @return the address's suite
      */
-    public String getStreet() { return this.street; }
+    @Override
+    public String street() {
+        return this.street;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -55,11 +51,6 @@ public class Address {
         return Objects.equals(suite, address.suite) &&
                 Objects.equals(houseNumber, address.houseNumber) &&
                 Objects.equals(street, address.street);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(suite, houseNumber, street);
     }
 
     @Override

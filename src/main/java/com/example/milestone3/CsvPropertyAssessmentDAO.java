@@ -1,4 +1,4 @@
-package com.example.milestone2;
+package com.example.milestone3;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,16 +19,7 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
      * Default constructor for the CSV Property Assessment DAO Class
      */
     public CsvPropertyAssessmentDAO() {
-        List<String[]> propertyAssessmentData;
-        try {
-            String defaultCsvFile = "Property_Assessment_Data_2022.csv";
-            propertyAssessmentData = this.readInCsv(defaultCsvFile);
-        } catch (IOException error) {
-            propertyAssessments = new ArrayList<>();
-            return;
-        }
-
-        this.propertyAssessments = this.createPropertyAssessments(propertyAssessmentData);
+        this("Property_Assessment_Data_2022.csv");
     }
 
     /**
@@ -145,9 +136,9 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
         for (PropertyAssessment propertyAssessment: propertyAssessments) {
             Address propertyAddress = propertyAssessment.getAddress();
 
-            StringBuilder addressString = new StringBuilder(propertyAddress.getSuite());
-            addressString.append(propertyAddress.getHouseNumber());
-            addressString.append(propertyAddress.getStreet());
+            StringBuilder addressString = new StringBuilder(propertyAddress.suite());
+            addressString.append(propertyAddress.houseNumber());
+            addressString.append(propertyAddress.street());
 
             if (addressString.toString().toLowerCase().contains(address.toLowerCase())) {
                 addressPropertyAssessments.add(propertyAssessment);
@@ -169,7 +160,7 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
         return propertyAssessments.stream()
                 .filter(propertyAssessment -> propertyAssessment.getAssessmentClassList()
                         .stream()
-                        .map(AssessmentClass::getAssessmentClassName)
+                        .map(AssessmentClass::assessmentClassName)
                         .anyMatch(assessmentClassName::equals))
                 .collect(Collectors.toList());
     }
@@ -279,7 +270,7 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
         return propertyAssessments.stream()
                 .map(PropertyAssessment::getAssessmentClassList)
                 .flatMap(List::stream)
-                .map(AssessmentClass::getAssessmentClassName)
+                .map(AssessmentClass::assessmentClassName)
                 .collect(Collectors.toSet());
     }
 

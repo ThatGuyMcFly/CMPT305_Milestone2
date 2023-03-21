@@ -4,6 +4,6 @@ module com.example.milestone2 {
     requires java.net.http;
 
 
-    opens com.example.milestone2 to javafx.fxml;
-    exports com.example.milestone2;
+    opens com.example.milestone3 to javafx.fxml;
+    exports com.example.milestone3;
 }

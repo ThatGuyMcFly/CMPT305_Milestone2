@@ -1,4 +1,4 @@
-package com.example.milestone2;
+package com.example.milestone3;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -418,15 +418,15 @@ public class PropertyAssessmentApplication extends Application {
                 if (!empty){
                     StringBuilder addressString = new StringBuilder();
 
-                    if(!address.getSuite().isEmpty()) {
-                        addressString.append(address.getSuite()).append(" ");
+                    if(!address.suite().isEmpty()) {
+                        addressString.append(address.suite()).append(" ");
                     }
 
-                    if(!address.getHouseNumber().isEmpty()) {
-                        addressString.append(address.getHouseNumber()).append(" ");
+                    if(!address.houseNumber().isEmpty()) {
+                        addressString.append(address.houseNumber()).append(" ");
                     }
 
-                    addressString.append(address.getStreet());
+                    addressString.append(address.street());
 
                     setText(addressString.toString());
                 } else {
@@ -467,8 +467,8 @@ public class PropertyAssessmentApplication extends Application {
                             assessmentClassString.append(" ");
                         }
 
-                        assessmentClassString.append(assessmentClassList.get(i).getAssessmentClassName()).append(" ");
-                        assessmentClassString.append(assessmentClassList.get(i).getAssessmentClassPercentage());
+                        assessmentClassString.append(assessmentClassList.get(i).assessmentClassName()).append(" ");
+                        assessmentClassString.append(assessmentClassList.get(i).assessmentClassPercentage());
                     }
 
                     assessmentClassString.append("]");

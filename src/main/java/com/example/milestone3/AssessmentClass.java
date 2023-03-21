@@ -1,21 +1,16 @@
-package com.example.milestone2;
+package com.example.milestone3;
 
 import java.util.Objects;
 
-public class AssessmentClass {
-
-    private final String assessmentClassName;
-    private final int assessmentClassPercentage;
+public record AssessmentClass(String assessmentClassName, int assessmentClassPercentage) {
 
     /**
      * Constructor for AssessmentClass Class
      *
-     * @param assessmentClassName The name of the assessment class
+     * @param assessmentClassName       The name of the assessment class
      * @param assessmentClassPercentage the percentage of the assessment class
      */
-    public AssessmentClass(String assessmentClassName, int assessmentClassPercentage){
-        this.assessmentClassName = assessmentClassName;
-        this.assessmentClassPercentage = assessmentClassPercentage;
+    public AssessmentClass {
     }
 
     /**
@@ -23,7 +18,8 @@ public class AssessmentClass {
      *
      * @return the assessment class name
      */
-    public String getAssessmentClassName() {
+    @Override
+    public String assessmentClassName() {
         return assessmentClassName;
     }
 
@@ -32,7 +28,8 @@ public class AssessmentClass {
      *
      * @return The assessment class percentage
      */
-    public int getAssessmentClassPercentage() {
+    @Override
+    public int assessmentClassPercentage() {
         return assessmentClassPercentage;
     }
 
@@ -42,11 +39,6 @@ public class AssessmentClass {
         if (o == null || getClass() != o.getClass()) return false;
         AssessmentClass that = (AssessmentClass) o;
         return assessmentClassPercentage == that.assessmentClassPercentage && Objects.equals(assessmentClassName, that.assessmentClassName);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(assessmentClassName, assessmentClassPercentage);
     }
 
     @Override
