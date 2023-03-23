@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -32,32 +33,60 @@ public class PropertyAssessmentApplication extends Application {
     ComboBox<String> assessmentClassSelect;
     Set<String> assessmentClassSet;
 
+    Scene mainScene;
+
+    Stage primaryStage;
+
     @Override
     public void start(Stage primaryStage){
-        primaryStage.setTitle("Property Assessments");
+        this.primaryStage = primaryStage;
+        //primaryStage.setTitle("Property Assessments");
         HBox mainHBox = new HBox(10);
         mainHBox.setPadding(new Insets(10, 10, 10, 10));
-        Scene scene = new Scene(mainHBox, 1500, 1000);
-        primaryStage.setScene(scene);
+        mainScene = new Scene(mainHBox, 1500, 1000);
+        this.primaryStage.setScene(mainScene);
 
-        VBox tableVBox =  createTableVBox();
-        tableVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(0.80));
+        VBox tabVBox = createTabVBox();
+        tabVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(0.80));
 
         VBox selectionVBox = createDataSelectionVBox();
         selectionVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(0.20));
 
         // Ensures the data select and property finder is always the same width
-        scene.widthProperty().addListener(change -> {
+        mainScene.widthProperty().addListener(change -> {
 
-            double selectionBoxMultiple = 300.0/scene.getWidth();
+            double selectionBoxMultiple = 300.0/mainScene.getWidth();
             double tableMultiple = 1.0 - selectionBoxMultiple;
 
-            tableVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(tableMultiple));
+            tabVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(tableMultiple));
             selectionVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(selectionBoxMultiple));
         });
 
-        mainHBox.getChildren().addAll(selectionVBox, tableVBox);
+        mainHBox.getChildren().addAll(selectionVBox, tabVBox);
         primaryStage.show();
+    }
+
+    private VBox createTabVBox() {
+        VBox tableVBox =  createTableVBox();
+
+        Tab overviewTab = new Tab("Overview");
+        Tab tableTab = new Tab("Property Assessment List", tableVBox);
+
+
+
+        overviewTab.setClosable(false);
+        tableTab.setClosable(false);
+
+        TabPane tabPane = new TabPane(overviewTab, tableTab);
+
+        Label tabLabel = new Label("Property Assessments");
+        tabLabel.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+
+        VBox tabVBox = new VBox(tabLabel, tabPane);
+
+        tableVBox.prefHeightProperty().bind(tabVBox.heightProperty());
+
+        return tabVBox;
     }
 
     /**
@@ -212,7 +241,6 @@ public class PropertyAssessmentApplication extends Application {
                 propertyAssessments.addAll(getFilteredList());
             }
         }
-
     }
 
     /**
@@ -391,6 +419,98 @@ public class PropertyAssessmentApplication extends Application {
     }
 
     /**
+     * Sets up a button going to the main scene
+     * @return a button for returning to main scene
+     */
+    private Button setupBackButton() {
+        Button backButton = new Button("Back");
+
+        backButton.setOnAction(event -> primaryStage.setScene(mainScene));
+
+        return backButton;
+    }
+
+    /**
+     * Creates the VBox for displaying the current assessment data
+     * @param propertyAssessment the property assessment whose data is to be displayed
+     * @return the VBox containing a property assessment's current assessment data
+     */
+    private VBox createPropertyAssessmentCurrentInformationVBox(PropertyAssessment propertyAssessment) {
+        Label accountNumberTitle = new Label("Account Number:");
+        Label accountNumber = new Label(Integer.toString(propertyAssessment.getAccountNumber()));
+        VBox accountNumberVBox = new VBox(accountNumberTitle, accountNumber);
+
+        Label addressTitle = new Label("Address:");
+        Address propertyAssessmentAddress = propertyAssessment.getAddress();
+        StringBuilder addressString = new StringBuilder();
+
+        String suite = propertyAssessmentAddress.suite();
+        String houseNumber = propertyAssessmentAddress.houseNumber();
+        String street = propertyAssessmentAddress.street();
+
+        if(!suite.equals("")){
+            addressString.append(suite).append(" ");
+        }
+
+        if(!houseNumber.equals("")) {
+            addressString.append(houseNumber).append(" ");
+        }
+
+        if(!street.equals("")) {
+            addressString.append(street);
+        }
+
+        Label address = new Label(addressString.toString());
+        VBox addressVBox = new VBox(addressTitle, address);
+
+        return new VBox(accountNumberVBox, addressVBox);
+    }
+
+    /**
+     * Creates the header for the property assessment scene
+     * @return an HBox containing the header of the property assessment scene
+     */
+    HBox createPropertyAssessmentHeader() {
+        Button backButton = setupBackButton();
+        Label propertyAssessmentTitle = new Label("Property Assessment");
+        propertyAssessmentTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+
+        HBox headerHBox = new HBox(backButton, propertyAssessmentTitle);
+
+        propertyAssessmentTitle.prefWidthProperty().bind(headerHBox.widthProperty().multiply(.95));
+        backButton.prefWidthProperty().bind(headerHBox.widthProperty().multiply(.05));
+
+        propertyAssessmentTitle.setAlignment(Pos.CENTER);
+
+        return headerHBox;
+    }
+
+    /**
+     * creates a VBox for displaying a property's assessment data
+     * @param propertyAssessment the property assessment whose data is being displayed
+     * @return a VBox containing a property assessment's data and a back button
+     */
+    private VBox createPropertyAssessmentVBox(PropertyAssessment propertyAssessment) {
+        HBox propertyAssessmentHeader = createPropertyAssessmentHeader();
+        VBox currentInformationVBox = createPropertyAssessmentCurrentInformationVBox(propertyAssessment);
+
+        currentInformationVBox.setPadding(new Insets(30, 10, 10, 10));
+
+        return new VBox(propertyAssessmentHeader, currentInformationVBox);
+    }
+
+    /**
+     * Creates and displays a scene to show a single property assessment's data
+     * @param propertyAssessment The property assessment to be displayed
+     */
+    private void showProperty(PropertyAssessment propertyAssessment) {
+        VBox propertyAssessmentVBox = createPropertyAssessmentVBox(propertyAssessment);
+        Scene propertyAssessmentScene = new Scene(propertyAssessmentVBox, mainScene.getWidth(), mainScene.getHeight());
+
+        primaryStage.setScene(propertyAssessmentScene);
+    }
+
+    /**
      * Creates and configures the components in the VBox that holds the table
      *
      * @return the VBox that holds the table
@@ -504,6 +624,14 @@ public class PropertyAssessmentApplication extends Application {
 
         table.prefWidthProperty().bind(tableVBox.widthProperty());
         table.prefHeightProperty().bind(tableVBox.heightProperty());
+
+        // Set up a listener to listen for a click on a row in table
+        table.getSelectionModel().selectedIndexProperty().addListener((observableValue, number, t1) -> {
+            if(t1.intValue() > -1) {
+                // show the property that was clicked on
+                showProperty(table.getItems().get(t1.intValue()));
+            }
+        });
 
         tableVBox.getChildren().addAll(tableLabel, table);
 
