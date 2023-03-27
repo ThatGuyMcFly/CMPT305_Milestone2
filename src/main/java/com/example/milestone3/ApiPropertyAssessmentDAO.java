@@ -14,6 +14,7 @@ import java.util.stream.IntStream;
 public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
 
     private final String endPoint;
+    private final String appToken = "3smbloCggKmhwOlTxnPEchy3G";
 
     /**
      * Default constructor for the API Property Assessment DAO Class
@@ -244,6 +245,17 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
     }
 
     /**
+     * Creates a query to for selecting properties assessed on a given year
+     *
+     * @param year the assessment year to search for
+     * @return A query string for filtering by year, or an empty string if year > 2023 or year < 2012, as there is no
+     *         data for these years
+     */
+    private String createAssessedYearQuery(int year) {
+        return (year > 2012 && year < 2023) ? "assessment_year=" + year : "";
+    }
+
+    /**
      * Creates a query by combining all the appropriate queries as determined by the provided filter
      *
      * @param filter A filter object that contains the fields to be filtered for
@@ -273,6 +285,13 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
 
         query.append(createAssessedValueRangeQuery(filter.getMinimumAssessedValue(), filter.getMaximumAssessedValue()));
+
+        // historical endpoint allows specific assessment years to be pulled
+        if(!query.isEmpty() && (filter.getAssessedYear() != -1)) {
+            query.append(" AND ");
+        }
+
+        query.append(createAssessedYearQuery(filter.getAssessedYear()));
 
         return query.toString();
     }
@@ -354,5 +373,27 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         String response = getData(createAssessedValueRangeQuery(0, max));
 
         return processData(response);
+    }
+
+    /**
+     * Gets the average historical value of all properties after applying a given filter
+     *
+     * @param filter a filter object that specifies the fields to filter by
+     * @return the average value of all property assessment found after filtering, or -1 if no results were found
+     */
+    public int getAvgHistoricalValue(Filter filter) {
+
+        //TODO: create separate method for building this query string, (column names are slightly different)
+        String filterQuery = createFilterQueryString(filter);
+
+        // historical data has 4.2 million rows, searching them without any filter will almost certainly cause a timeout
+        if (filterQuery.isEmpty())
+            return -1;
+
+        String result = getData("?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" + filterQuery);
+        String[] values = result.replaceAll("\"", "").split("\n");
+
+        return (values.length > 1) ? Math.round( Float.parseFloat(values[1]) ) : -1;
+
     }
 }

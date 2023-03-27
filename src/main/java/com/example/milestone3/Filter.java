@@ -6,6 +6,7 @@ public class Filter {
     private final String assessmentClass;
     private final int minimumAssessedValue;
     private final int maximumAssessedValue;
+    private final int assessedYear;
 
     /**
      * Builder class for the Filter class
@@ -16,6 +17,7 @@ public class Filter {
         private String assessmentClass = "";
         private int minimumAssessedValue = -1;
         private int maximumAssessedValue = -1;
+        private int assessedYear = -1;
 
         /**
          * Set address value
@@ -68,6 +70,16 @@ public class Filter {
         }
 
         /**
+         * Set maximumAssessedValue value
+         *
+         * @param val the assessedYear value
+         * @return a reference to this Builder
+         */
+        public Builder assessedYear(int val) {
+            assessedYear = val; return this;
+        }
+
+        /**
          * The function for building the filter
          *
          * @return a new filter object
@@ -88,6 +100,7 @@ public class Filter {
         assessmentClass = builder.assessmentClass;
         minimumAssessedValue = builder.minimumAssessedValue;
         maximumAssessedValue = builder.maximumAssessedValue;
+        assessedYear = builder.assessedYear;
     }
 
     /**
@@ -134,4 +147,11 @@ public class Filter {
     public int getMaximumAssessedValue() {
         return maximumAssessedValue;
     }
+
+    /**
+     * Getter for the assessed year
+     *
+     * @return the assessed year value
+     */
+    public int getAssessedYear() { return assessedYear; }
 }
