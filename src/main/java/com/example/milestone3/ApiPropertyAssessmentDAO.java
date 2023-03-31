@@ -2,11 +2,13 @@ package com.example.milestone3;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Year;
 import java.util.*;
 import java.util.stream.IntStream;
 
@@ -14,7 +16,8 @@ import java.util.stream.IntStream;
 public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
 
     private final String endPoint;
-    private final String appToken = "3smbloCggKmhwOlTxnPEchy3G";
+    private static final String appToken = "3smbloCggKmhwOlTxnPEchy3G";
+    private static final String historicalApiEndpoint = "https://data.edmonton.ca/resource/qi6a-xuwt.csv";
 
     /**
      * Default constructor for the API Property Assessment DAO Class
@@ -209,7 +212,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
      * @param assessmentClass The assessment class to be queried
      * @return a query for an assessment class or an empty string is neighbourhood is empty
      */
-    private String createAssessmentClassQuery(String assessmentClass) {
+    private static String createAssessmentClassQuery(String assessmentClass) {
         if (assessmentClass.isEmpty()) {
             return "";
         }
@@ -245,17 +248,6 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
     }
 
     /**
-     * Creates a query to for selecting properties assessed on a given year
-     *
-     * @param year the assessment year to search for
-     * @return A query string for filtering by year, or an empty string if year > 2023 or year < 2012, as there is no
-     *         data for these years
-     */
-    private String createAssessedYearQuery(int year) {
-        return (year > 2012 && year < 2023) ? "assessment_year=" + year : "";
-    }
-
-    /**
      * Creates a query by combining all the appropriate queries as determined by the provided filter
      *
      * @param filter A filter object that contains the fields to be filtered for
@@ -285,13 +277,6 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
 
         query.append(createAssessedValueRangeQuery(filter.getMinimumAssessedValue(), filter.getMaximumAssessedValue()));
-
-        // historical endpoint allows specific assessment years to be pulled
-        if(!query.isEmpty() && (filter.getAssessedYear() != -1)) {
-            query.append(" AND ");
-        }
-
-        query.append(createAssessedYearQuery(filter.getAssessedYear()));
 
         return query.toString();
     }
@@ -374,6 +359,141 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
 
         return processData(response);
     }
+
+    // Static class for getting historical property assessment data
+    public static class HistoricalAssessmentsDAO {
+
+
+        /**
+         * Creates a query for selecting properties in a specific neighbourhood
+         *
+         * @param neighbourhood the neighbourhood to search for
+         * @return A query string for filtering by neighbourhood, or an empty string if no neighbourhood is given
+         */
+        private String createNeighbourhoodQuery(String neighbourhood) {
+            return !neighbourhood.isEmpty() ? "neighbourhood_name like '" + neighbourhood.toUpperCase() + "%'" : "";
+        }
+
+        /**
+         * Creates a query for selecting properties in a specific area of edmonton
+         *
+         * @param area the part of edmonton to filter by (north, south, east, west, or central)
+         * @return A query string for filtering by area, or an empty string if no area is given
+         */
+        private String createAreaQuery(String area) {
+            return switch (area) {
+                case "North" -> "latitude>53.5590";
+                case "South" -> "latitude<53.5180";
+                case "West" -> "longitude<-113.5405";
+                case "East" -> "longitude>-113.4540";
+                case "Central" ->
+                        "(latitude<53.5590 and latitude>53.5180 and longitude>-113.5405 and longitude<-113.4540)";
+                default -> "";
+            };
+        }
+
+        /**
+         * Creates a query for selecting properties built in a specific range of years
+         *
+         * @param min the minimum year to filter by
+         * @param max the maximum year to filter by
+         * @return A string for filtering by the year a property was built, or an empty string if no values are given
+         */
+        private String createYearBuiltRangeQuery(int min, int max) {
+            String minString = "";
+            String maxString = "";
+
+            if (min < 0 && max < 0) {
+                return "";
+            }
+
+            if (min < 0) {
+                maxString = " <= " + max;
+            } else if (max < 0) {
+                minString = " >= " + min;
+            } else {
+                minString = "between " + min;
+                maxString = " and " + max;
+            }
+
+            return "year_built " + minString + maxString;
+        }
+
+        /**
+         * Creates a query by combining all the appropriate queries as determined by the provided filter
+         *
+         * @param filter A filter object that contains the fields to be filtered for
+         * @return An amalgamated query for all the fields specified in the provided filter
+         */
+        private String createFilterQueryString(Filter filter) {
+            StringBuilder query = new StringBuilder();
+
+            String neighbourhoodQuery = createNeighbourhoodQuery(filter.getNeighbourhood());
+            query.append( URLEncoder.encode(neighbourhoodQuery, StandardCharsets.UTF_8) );
+
+            // adds an AND between queries only if there are previous queries added and the filter field isn't the
+            // default value of the filter field
+            if(!query.isEmpty() && !filter.getArea().isEmpty()) {
+                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+            }
+            String areaQuery = createAreaQuery(filter.getArea());
+            query.append( URLEncoder.encode(areaQuery, StandardCharsets.UTF_8) );
+
+            if(!query.isEmpty() && !filter.getAssessmentClass().isEmpty()) {
+                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+            }
+            String assessClassQuery = createAssessmentClassQuery(filter.getAssessmentClass());
+            query.append( URLEncoder.encode(assessClassQuery, StandardCharsets.UTF_8) );
+
+            if(!query.isEmpty() && (filter.getMinimumYearBuilt() > -1 || filter.getMaximumYearBuilt() > -1)) {
+                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+            }
+            String yearRange = createYearBuiltRangeQuery(filter.getMinimumYearBuilt(), filter.getMaximumYearBuilt());
+            query.append( URLEncoder.encode(yearRange, StandardCharsets.UTF_8) );
+
+            return query.toString();
+        }
+
+        /**
+         * get a list of average property values for the past 10 years using a given filter
+         *
+         * @param filter A filter object that contains the fields to be filtered for
+         * @return A list of integers, where List[i] is the average value of filtered properties 10 - i years ago
+         */
+        public List<Integer> getAvgHistoricalValues(Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
+                            createFilterQueryString(filter) + "&assessed_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+
+                year++;
+            }
+            return values;
+        }
+
+        private String callEndpoint(String query) {
+            String url = historicalApiEndpoint + query;
+            HttpClient client = HttpClient.newHttpClient();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            try{
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                return response.body();
+            } catch (IOException | InterruptedException e){
+                return "";
+            }
+        }
+    }
+
 
     /**
      * Gets the average historical value of all properties after applying a given filter
