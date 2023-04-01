@@ -2,7 +2,6 @@ package com.example.milestone3;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -475,8 +474,46 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return values;
         }
 
+        /**
+         * Gets the index of a string within in an array of strings
+         *
+         * @param stringArray The array of string being searched
+         * @param str The string being searched for
+         * @return The index of the string in the array, or -1 if the string wasn't found
+         */
+        private static int getIndex(String[] stringArray, String str) {
+            return IntStream.range(0, stringArray.length)
+                    .filter(i -> str.equals(stringArray[i]))
+                    .findFirst()
+                    .orElse(-1);
+        }
+
+        /**
+         * Creates a formatted URL Query
+         *
+         * @param urlQuery the query to be formatted
+         * @return a formatted URL Query
+         */
+        private static String createUrl(String urlQuery) {
+            String[] queryArray = urlQuery.split("&");
+            StringBuilder url = new StringBuilder(historicalApiEndpoint);
+
+            for (String subQuery: queryArray) {
+                // avoids encoding '=' and '&' characters since that was causing issues when sending the queries
+                int equalIndex = subQuery.indexOf('=');
+                url.append(subQuery, 0, equalIndex + 1).append(URLEncoder.encode(subQuery.substring(equalIndex + 1), StandardCharsets.UTF_8));
+
+                if (getIndex(queryArray, subQuery) != queryArray.length - 1){
+                    url.append("&");
+                }
+            }
+
+            return url.toString();
+        }
+
         private static String callEndpoint(String query) {
-            String url = historicalApiEndpoint + query;
+            String url = createUrl(query);
+
             HttpClient client = HttpClient.newHttpClient();
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -490,6 +527,22 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             } catch (IOException | InterruptedException e){
                 return "";
             }
+        }
+
+        public static List<Integer> getHistoricalPropertyValuesByAccountNumber(int account_number) {
+            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" + account_number + "'";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String newQuery = query + year + "'";
+                String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+
+            return values;
         }
     }
 

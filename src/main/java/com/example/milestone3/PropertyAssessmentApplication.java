@@ -33,10 +33,16 @@ public class PropertyAssessmentApplication extends Application {
     private Font dataFont;
     private Font headingFont;
     private Font titleFont;
-    ComboBox<String> assessmentClassSelect;
-    Set<String> assessmentClassSet;
-    Scene mainScene;
-    Stage primaryStage;
+    private ComboBox<String> assessmentClassSelect;
+    private Scene mainScene;
+    private Stage primaryStage;
+
+    private Text minValueText = new Text();
+    private Text maxValueText = new Text();
+    private Text averageValueText = new Text();
+    private Text minLotSizeText = new Text();
+    private Text maxLotSizeText = new Text();
+    private Text averageLotSizeText = new Text();
 
     @Override
     public void start(Stage primaryStage){
@@ -71,16 +77,53 @@ public class PropertyAssessmentApplication extends Application {
         primaryStage.show();
     }
 
+    private VBox createTextVBox(Text text, String title){
+        Text textTitle = new Text(title);
+        textTitle.setFont(dataFont);
+        text.setFont(dataFont);
+        VBox textVBox = new VBox(textTitle, text);
+        textVBox.setPadding(new Insets(0, 0, 10, 0));
+
+        return textVBox;
+    }
+
+    private VBox createValuesVBox() {
+        VBox minValueVBox = createTextVBox(minValueText, "Minimum Value");
+        VBox maxValueVBox = createTextVBox(maxValueText, "Maximum Value");
+        VBox averageValueVBox = createTextVBox(averageValueText, "Average Value");
+
+        return new VBox(minValueVBox, maxValueVBox, averageValueVBox);
+    }
+
+    private VBox createLotSizeVBox() {
+        VBox minLotSizeVBox = createTextVBox(minLotSizeText, "Minimum Lot Size");
+        VBox maxLotSizeVBox = createTextVBox(maxLotSizeText, "Maximum Lot Size");
+        VBox averageLotSize = createTextVBox(averageLotSizeText, "Average Lot Size");
+
+        return new VBox(minLotSizeVBox, maxLotSizeVBox, averageLotSize);
+    }
+
+    private HBox createDetailsHBox() {
+        VBox valuesVBox = createValuesVBox();
+        VBox lotSizeVBox = createLotSizeVBox();
+
+        HBox detailsHBox = new HBox(valuesVBox, lotSizeVBox);
+
+        valuesVBox.prefWidthProperty().bind(detailsHBox.widthProperty().multiply(.5));
+
+        return detailsHBox;
+    }
+
     private VBox createOverviewVBox() {
         HBox detailsHBox = new HBox();
 
-        return new VBox();
+        return new VBox(detailsHBox);
     }
 
     private VBox createTabVBox() {
         VBox tableVBox =  createTableVBox();
         VBox overviewVBox = createOverviewVBox();
-        Tab overviewTab = new Tab("Overview");
+        Tab overviewTab = new Tab("Overview", overviewVBox);
         Tab tableTab = new Tab("Property Assessment List", tableVBox);
 
         overviewTab.setClosable(false);
@@ -96,6 +139,10 @@ public class PropertyAssessmentApplication extends Application {
         tableVBox.prefHeightProperty().bind(tabVBox.heightProperty());
 
         return tabVBox;
+    }
+
+    private void populateOverview(Filter filter) {
+
     }
 
     /**
@@ -119,7 +166,7 @@ public class PropertyAssessmentApplication extends Application {
         }
 
         propertyAssessmentList = propertyAssessmentDAO.getPropertyAssessments();
-        assessmentClassSet = propertyAssessmentDAO.getAssessmentClasses();
+        Set<String> assessmentClassSet = propertyAssessmentDAO.getAssessmentClasses();
         assessmentClassSet.add("");
 
         assessmentClasses.addAll(assessmentClassSet);
@@ -471,7 +518,7 @@ public class PropertyAssessmentApplication extends Application {
         return createDataVBox("Address:", addressString.toString());
     }
 
-    private Label createLable(String labelText, Font font){
+    private Label createLabel(String labelText, Font font){
         Label label = new Label(labelText);
         label.setFont(font);
         label.setPadding(new Insets(0, 0, 10, 0));
@@ -480,7 +527,7 @@ public class PropertyAssessmentApplication extends Application {
     }
 
     private VBox createSpecificsHBox(PropertyAssessment propertyAssessment) {
-        Label specificsLabel = createLable("Property Specifics", headingFont);
+        Label specificsLabel = createLabel("Property Specifics", headingFont);
 
         VBox accountNumberVBox = createDataVBox("Account Number:", Integer.toString(propertyAssessment.getAccountNumber()));
 
@@ -492,7 +539,7 @@ public class PropertyAssessmentApplication extends Application {
     }
 
     private VBox createCurrentDataVBox(PropertyAssessment propertyAssessment) {
-        Label currentDataLabel = createLable("Current Data", headingFont);
+        Label currentDataLabel = createLabel("Current Data", headingFont);
 
         VBox currentValueVBox = createDataVBox("Current Value", "$" + propertyAssessment.getAssessedValue());
 
@@ -553,6 +600,8 @@ public class PropertyAssessmentApplication extends Application {
         VBox propertyAssessmentVBox = new VBox();
 
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
+
+        List<Integer> historicalValues = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
 
         return new VBox(propertyAssessmentHeader, currentInformationVBox);
     }
