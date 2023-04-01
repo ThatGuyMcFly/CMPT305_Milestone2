@@ -359,6 +359,65 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         return processData(response);
     }
 
+    /**
+     * Gets the highest assessment value of a set of filtered property assessments
+     * @param filter The filter for how the property assessments are filtered
+     * @return the largest assessed value of the set of filtered property assessments
+     */
+    @Override
+    public double max(Filter filter) {
+        return minMaxAverage("max", filter);
+    }
+
+    /**
+     * Gets the highest assessment value of a set of filtered property assessments
+     * @param filter The filter for how the property assessments are filtered
+     * @return the largest assessed value of the set of filtered property assessments
+     */
+    @Override
+    public double min(Filter filter) {
+        return minMaxAverage("min", filter);
+    }
+
+    /**
+     * Gets the highest assessment value of a set of filtered property assessments
+     * @param filter The filter for how the property assessments are filtered
+     * @return the largest assessed value of the set of filtered property assessments
+     */
+    @Override
+    public double average(Filter filter) {
+        return minMaxAverage("avg", filter);
+    }
+
+    /**
+     * Gets the specified assessed values statistic of a set of filtered property assessments
+     *
+     * @param minMaxAverage the type of static to get
+     *                      The assessed values statistics are as follows:
+     *                          max: the largest assessed value
+     *                          min: the smallest assessed value
+     *                          avg: the average assessed value
+     * @param filter the filter for how filter the property assessments
+     * @return the specified assessed values statistic lot size of the filtered property assessments
+     */
+    private double minMaxAverage(String minMaxAverage, Filter filter) {
+        StringBuilder query = new StringBuilder("?$select=").append(minMaxAverage).append("(assessed_value)");
+
+        String filterQuery = createFilterQueryString(filter);
+
+        if(!filterQuery.isEmpty()) {
+            query.append(" where ").append(filterQuery);
+        }
+
+        String response = getData(query.toString());
+
+        try{
+            return Double.parseDouble(response.replaceAll("\"", "").split("\n")[1]);
+        } catch (NumberFormatException error) {
+            return -1;
+        }
+    }
+
     // Static class for getting historical property assessment data
     public static class HistoricalAssessmentsDAO {
 
@@ -428,27 +487,27 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             StringBuilder query = new StringBuilder();
 
             String neighbourhoodQuery = createNeighbourhoodQuery(filter.getNeighbourhood());
-            query.append( URLEncoder.encode(neighbourhoodQuery, StandardCharsets.UTF_8) );
+            query.append(neighbourhoodQuery);
 
             // adds an AND between queries only if there are previous queries added and the filter field isn't the
             // default value of the filter field
             if(!query.isEmpty() && !filter.getArea().isEmpty()) {
-                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+                query.append(" and ");
             }
             String areaQuery = createAreaQuery(filter.getArea());
-            query.append( URLEncoder.encode(areaQuery, StandardCharsets.UTF_8) );
+            query.append(areaQuery);
 
             if(!query.isEmpty() && !filter.getAssessmentClass().isEmpty()) {
-                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+                query.append(" and ");
             }
             String assessClassQuery = createAssessmentClassQuery(filter.getAssessmentClass());
-            query.append( URLEncoder.encode(assessClassQuery, StandardCharsets.UTF_8) );
+            query.append(assessClassQuery);
 
             if(!query.isEmpty() && (filter.getMinimumYearBuilt() > -1 || filter.getMaximumYearBuilt() > -1)) {
-                query.append( URLEncoder.encode(" and ", StandardCharsets.UTF_8) );
+                query.append(" and ");
             }
             String yearRange = createYearBuiltRangeQuery(filter.getMinimumYearBuilt(), filter.getMaximumYearBuilt());
-            query.append( URLEncoder.encode(yearRange, StandardCharsets.UTF_8) );
+            query.append(yearRange);
 
             return query.toString();
         }
@@ -511,8 +570,15 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return url.toString();
         }
 
+        /**
+         * Makes queries to the historical data API
+         * @param query The query to be made to the historical data API
+         * @return the response from the API
+         */
         private static String callEndpoint(String query) {
             String url = createUrl(query);
+
+            System.out.println(url);
 
             HttpClient client = HttpClient.newHttpClient();
 
@@ -529,8 +595,13 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             }
         }
 
+        /**
+         * Gets a list of historical assessment values of a specified property assessment
+         * @param account_number The account number of the specific property assessment
+         * @return a list of historical assessment values where years without data are stored as -1
+         */
         public static List<Integer> getHistoricalPropertyValuesByAccountNumber(int account_number) {
-            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" + account_number + "'";
+            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" + account_number + "' and assessment_year='";
 
             int year = Year.now().getValue() - 11;
             List<Integer> values = new ArrayList<>();
@@ -544,8 +615,68 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
 
             return values;
         }
-    }
 
+        /**
+         * Gets the average lot size of filtered property assessments
+         * @param filter the filter for how filter the property assessments
+         * @return the average lot size of the filtered property assessments
+         */
+        public static int averageLotSize(Filter filter) { return lotSize("avg", filter); }
+
+        /**
+         * Gets the largest lot size of filtered property assessments
+         * @param filter the filter for how filter the property assessments
+         * @return the average lot size of the filtered property assessments
+         */
+        public static int maxLotSize(Filter filter) { return lotSize("max", filter); }
+
+        /**
+         * Gets the smallest lot size of filtered property assessments
+         * @param filter the filter for how filter the property assessments
+         * @return the average lot size of the filtered property assessments
+         */
+        public static int minLotSize(Filter filter) { return lotSize("min", filter); }
+
+        /**
+         * Gets the specified lot size statistic of filtered property assessments
+         *
+         * @param minMaxAverage the type of static to get
+         *                      The lost size statistics are as follows:
+         *                          max: the largest lot size
+         *                          min: the smallest lot size
+         *                          avg: the average lot size
+         * @param filter the filter for how filter the property assessments
+         * @return the specified lot size statistic lot size of the filtered property assessments
+         */
+        private static int lotSize(String minMaxAverage, Filter filter) {
+            StringBuilder query = new StringBuilder("?$$app_token=")
+                    .append(appToken)
+                    .append("&$select=")
+                    .append(minMaxAverage)
+                    .append("(lot_size) where ")
+                    .append("assessment_year='")
+                    .append((Year.now().getValue() - 1))
+                    .append("'");
+
+
+            String filterQuery = createFilterQueryString(filter);
+
+            if(!filterQuery.isEmpty()) {
+                query.append(" AND ").append(createFilterQueryString(filter));
+            }
+
+            System.out.println(query);
+
+            String[] response = callEndpoint(query.toString()).replaceAll("\"", "").split("\n");
+
+
+            try{
+                return (int) Double.parseDouble(response[1]);
+            } catch (NumberFormatException error) {
+                return -1;
+            }
+        }
+    }
 
     /**
      * Gets the average historical value of all properties after applying a given filter

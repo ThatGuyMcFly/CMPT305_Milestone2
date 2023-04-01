@@ -37,12 +37,12 @@ public class PropertyAssessmentApplication extends Application {
     private Scene mainScene;
     private Stage primaryStage;
 
-    private Text minValueText = new Text();
-    private Text maxValueText = new Text();
-    private Text averageValueText = new Text();
-    private Text minLotSizeText = new Text();
-    private Text maxLotSizeText = new Text();
-    private Text averageLotSizeText = new Text();
+    private final Text minValueText = new Text();
+    private final Text maxValueText = new Text();
+    private final Text averageValueText = new Text();
+    private final Text minLotSizeText = new Text();
+    private final Text maxLotSizeText = new Text();
+    private final Text averageLotSizeText = new Text();
 
     @Override
     public void start(Stage primaryStage){
@@ -77,7 +77,13 @@ public class PropertyAssessmentApplication extends Application {
         primaryStage.show();
     }
 
-    private VBox createTextVBox(Text text, String title){
+    /**
+     * Sets up a VBox that has a title and text box to be filled in later
+     * @param text The text box that will be populated later
+     * @param title The title to be put in the VBox
+     * @return a new VBox with a title and text box
+     */
+    private VBox setupTextVBox(Text text, String title){
         Text textTitle = new Text(title);
         textTitle.setFont(dataFont);
         text.setFont(dataFont);
@@ -87,22 +93,34 @@ public class PropertyAssessmentApplication extends Application {
         return textVBox;
     }
 
+    /**
+     * Creates a VBox that holds the assessed value information for property assessments
+     * @return a VBox that holds the assessed value information for property assessments
+     */
     private VBox createValuesVBox() {
-        VBox minValueVBox = createTextVBox(minValueText, "Minimum Value");
-        VBox maxValueVBox = createTextVBox(maxValueText, "Maximum Value");
-        VBox averageValueVBox = createTextVBox(averageValueText, "Average Value");
+        VBox minValueVBox = setupTextVBox(minValueText, "Minimum Value");
+        VBox maxValueVBox = setupTextVBox(maxValueText, "Maximum Value");
+        VBox averageValueVBox = setupTextVBox(averageValueText, "Average Value");
 
         return new VBox(minValueVBox, maxValueVBox, averageValueVBox);
     }
 
+    /**
+     * Creates a VBox that holds the lot size info of property assessments
+     * @return a VBox that holds the lot size info of property assessments
+     */
     private VBox createLotSizeVBox() {
-        VBox minLotSizeVBox = createTextVBox(minLotSizeText, "Minimum Lot Size");
-        VBox maxLotSizeVBox = createTextVBox(maxLotSizeText, "Maximum Lot Size");
-        VBox averageLotSize = createTextVBox(averageLotSizeText, "Average Lot Size");
+        VBox minLotSizeVBox = setupTextVBox(minLotSizeText, "Minimum Lot Size");
+        VBox maxLotSizeVBox = setupTextVBox(maxLotSizeText, "Maximum Lot Size");
+        VBox averageLotSize = setupTextVBox(averageLotSizeText, "Average Lot Size");
 
         return new VBox(minLotSizeVBox, maxLotSizeVBox, averageLotSize);
     }
 
+    /**
+     * Creates an HBox that holds the Assessed Values and lot size information of the property assessments
+     * @return An HBox that holds the details of the property values
+     */
     private HBox createDetailsHBox() {
         VBox valuesVBox = createValuesVBox();
         VBox lotSizeVBox = createLotSizeVBox();
@@ -114,12 +132,20 @@ public class PropertyAssessmentApplication extends Application {
         return detailsHBox;
     }
 
+    /**
+     * Creates a VBox that holds the overview information
+     * @return A VBox with the overview information
+     */
     private VBox createOverviewVBox() {
-        HBox detailsHBox = new HBox();
-
-        return new VBox(detailsHBox);
+        HBox detailsHBox = createDetailsHBox();
+        Label overViewLabel = createLabel("Property Assessments Overview", titleFont);
+        return new VBox(overViewLabel, detailsHBox);
     }
 
+    /**
+     * Builds the VBox that holds the tabs
+     * @return a VBox containing the tabs
+     */
     private VBox createTabVBox() {
         VBox tableVBox =  createTableVBox();
         VBox overviewVBox = createOverviewVBox();
@@ -141,7 +167,72 @@ public class PropertyAssessmentApplication extends Application {
         return tabVBox;
     }
 
-    private void populateOverview(Filter filter) {
+    /**
+     * Builds a filter based on the values in the search boxes
+     * @return a populated Filter
+     */
+    private Filter buildFilter() {
+        String address = addressTextField.getText();
+        String neighbourhood = neighbourhoodTextField.getText();
+        String assessmentClass = assessmentClassSelect.getValue();
+        int minimumAssessedValue = getIntValue(minValueTextField);
+        int maximumAssessedValue = getIntValue(maxValueTextField);
+
+        Filter.Builder builder = new Filter.Builder();
+
+        if(!address.isEmpty()) {
+            builder.address(address);
+        }
+
+        if(!neighbourhood.isEmpty()) {
+            builder.neighbourhood(neighbourhood);
+        }
+
+        if(!assessmentClass.isEmpty()) {
+            builder.assessmentClass(assessmentClass);
+        }
+
+        if(minimumAssessedValue >= 0) {
+            builder.minimumAssessedValue(minimumAssessedValue);
+        }
+
+        if(maximumAssessedValue >= 0) {
+            builder.maximumAssessedValue(maximumAssessedValue);
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Returns the string value of an integer if greater than or equal to 0, or the string 'No Data Found'
+     * @param value The integer to be converted to a string
+     * @return the string value of an integer or 'No Data Found' if value less than 0
+     */
+    private String valueString(int value) {
+        return value >= 0 ? Integer.toString(value) : "No Data Found";
+    }
+
+    /**
+     * Populates the text fields in the overview tab
+     */
+    private void populateOverview() {
+        Filter filter = buildFilter();
+
+        String minValueString = valueString((int) propertyAssessmentDAO.min(filter));
+        String maxValueString = valueString((int) propertyAssessmentDAO.max(filter));
+        String averageValueString = valueString((int) propertyAssessmentDAO.average(filter));
+
+        String minLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.minLotSize(filter));
+        String maxLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.maxLotSize(filter));
+        String averageLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.averageLotSize(filter));
+
+        minValueText.setText(minValueString);
+        maxValueText.setText(maxValueString);
+        averageValueText.setText(averageValueString);
+
+        minLotSizeText.setText(minLotSizeString);
+        maxLotSizeText.setText(maxLotSizeString);
+        averageLotSizeText.setText(averageLotSizeString);
 
     }
 
@@ -176,6 +267,8 @@ public class PropertyAssessmentApplication extends Application {
         if (propertyAssessmentList.size() > 0) {
             propertyAssessments.addAll(propertyAssessmentList);
         }
+
+        populateOverview();
     }
 
     /**
@@ -231,38 +324,7 @@ public class PropertyAssessmentApplication extends Application {
      * @return A list of property assessments
      */
     private List<PropertyAssessment> getFilteredList() {
-
-        String address = addressTextField.getText();
-        String neighbourhood = neighbourhoodTextField.getText();
-        String assessmentClass = assessmentClassSelect.getValue();
-        int minimumAssessedValue = getIntValue(minValueTextField);
-        int maximumAssessedValue = getIntValue(maxValueTextField);
-
-        Filter.Builder builder = new Filter.Builder();
-
-        if(!address.isEmpty()) {
-            builder.address(address);
-        }
-
-        if(!neighbourhood.isEmpty()) {
-            builder.neighbourhood(neighbourhood);
-        }
-
-        if(!assessmentClass.isEmpty()) {
-            builder.assessmentClass(assessmentClass);
-        }
-
-        if(minimumAssessedValue >= 0) {
-            builder.minimumAssessedValue(minimumAssessedValue);
-        }
-
-        if(maximumAssessedValue >= 0) {
-            builder.maximumAssessedValue(maximumAssessedValue);
-        }
-
-        Filter filter = builder.build();
-
-        return propertyAssessmentDAO.getPropertyAssessments(filter);
+        return propertyAssessmentDAO.getPropertyAssessments(buildFilter());
     }
 
     /**
@@ -285,6 +347,7 @@ public class PropertyAssessmentApplication extends Application {
             } else {
                 propertyAssessments.clear();
                 propertyAssessments.add(propertyAssessment);
+                populateOverview();
             }
         } else {
 
@@ -294,6 +357,7 @@ public class PropertyAssessmentApplication extends Application {
             } else {
                 propertyAssessments.clear();
                 propertyAssessments.addAll(getFilteredList());
+                populateOverview();
             }
         }
     }
@@ -485,6 +549,12 @@ public class PropertyAssessmentApplication extends Application {
         return backButton;
     }
 
+    /**
+     * Creates a VBox that will have title and some data
+     * @param title The title of the VBox
+     * @param value The value to be displayed in the VBox
+     * @return a VBox with a title and some data
+     */
     private VBox createDataVBox (String title, String value){
         Text textTitle = new Text(title);
         Text textValue = new Text(value);
@@ -496,6 +566,11 @@ public class PropertyAssessmentApplication extends Application {
         return dataVBox;
     }
 
+    /**
+     * Creates and populates a VBox that will hold the address of a property assessment
+     * @param address the address object whose data will be used to populate the VBox
+     * @return A VBox with address data in it
+     */
     private VBox createAddressVBox(Address address) {
         StringBuilder addressString = new StringBuilder();
 
@@ -518,6 +593,12 @@ public class PropertyAssessmentApplication extends Application {
         return createDataVBox("Address:", addressString.toString());
     }
 
+    /**
+     * Creates a label with specified label text and font
+     * @param labelText The text to put in the Label
+     * @param font The font to be applied to the label
+     * @return A Label with specified text and font
+     */
     private Label createLabel(String labelText, Font font){
         Label label = new Label(labelText);
         label.setFont(font);
@@ -526,6 +607,11 @@ public class PropertyAssessmentApplication extends Application {
         return label;
     }
 
+    /**
+     * Creates the VBox that holds the specifics of a property assessment
+     * @param propertyAssessment The property assessment whose data will be displayed in the VBox
+     * @return An VBox that has data of a property assessment
+     */
     private VBox createSpecificsHBox(PropertyAssessment propertyAssessment) {
         Label specificsLabel = createLabel("Property Specifics", headingFont);
 
@@ -538,6 +624,11 @@ public class PropertyAssessmentApplication extends Application {
         return new VBox(specificsLabel, accountNumberVBox, addressVBox, neighbourhoodVBox);
     }
 
+    /**
+     * A VBox that holds the current data of a property assessment
+     * @param propertyAssessment The property assessment whose current data will be displayed in the VBox
+     * @return A VBox with a property assessment's current data
+     */
     private VBox createCurrentDataVBox(PropertyAssessment propertyAssessment) {
         Label currentDataLabel = createLabel("Current Data", headingFont);
 
