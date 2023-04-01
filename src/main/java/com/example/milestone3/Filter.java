@@ -6,6 +6,10 @@ public class Filter {
     private final String assessmentClass;
     private final int minimumAssessedValue;
     private final int maximumAssessedValue;
+    private final String area;
+    private final int minimumYearBuilt;
+    private final int maximumYearBuilt;
+
 
     /**
      * Builder class for the Filter class
@@ -16,6 +20,9 @@ public class Filter {
         private String assessmentClass = "";
         private int minimumAssessedValue = -1;
         private int maximumAssessedValue = -1;
+        private String area = "";
+        private int minimumYearBuilt = -1;
+        private int maximumYearBuilt = -1;
 
         /**
          * Set address value
@@ -68,6 +75,36 @@ public class Filter {
         }
 
         /**
+         * Set area value (north, east, south, west)
+         *
+         * @param val the area value
+         * @return a reference to this Builder
+         */
+        public Builder area(String val) {
+            area = val; return this;
+        }
+
+        /**
+         * Set the minimumYearBuilt value
+         *
+         * @param val the minimumYearBuilt value
+         * @return a reference to this Builder
+         */
+        public Builder minimumYearBuilt(int val) {
+            minimumYearBuilt = val; return this;
+        }
+
+        /**
+         * Set the maximumYearBuilt value
+         *
+         * @param val the maximumYearBuilt value
+         * @return a reference to this Builder
+         */
+        public Builder maximumYearBuilt(int val) {
+            maximumYearBuilt = val; return this;
+        }
+
+        /**
          * The function for building the filter
          *
          * @return a new filter object
@@ -88,6 +125,9 @@ public class Filter {
         assessmentClass = builder.assessmentClass;
         minimumAssessedValue = builder.minimumAssessedValue;
         maximumAssessedValue = builder.maximumAssessedValue;
+        area = builder.area;
+        minimumYearBuilt = builder.minimumYearBuilt;
+        maximumYearBuilt = builder.maximumYearBuilt;
     }
 
     /**
@@ -134,4 +174,25 @@ public class Filter {
     public int getMaximumAssessedValue() {
         return maximumAssessedValue;
     }
+
+    /**
+     * Getter for the area
+     *
+     * @return the area value
+     */
+    public String getArea() { return area; }
+
+    /**
+     * Getter for the minimum year built
+     *
+     * @return the minimum year built value
+     */
+    public int getMinimumYearBuilt() { return minimumYearBuilt; }
+
+    /**
+     * Getter for the maximum year built
+     *
+     * @return the maximum year built value
+     */
+    public int getMaximumYearBuilt() { return maximumYearBuilt; }
 }
