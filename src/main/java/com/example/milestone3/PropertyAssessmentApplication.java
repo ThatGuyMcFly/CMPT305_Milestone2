@@ -12,6 +12,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -29,12 +30,12 @@ public class PropertyAssessmentApplication extends Application {
     private TextField maxValueTextField = new TextField();
     private ComboBox<String> sourceSelect;
     private ObservableList<String> assessmentClasses;
-
+    private Font dataFont;
+    private Font headingFont;
+    private Font titleFont;
     ComboBox<String> assessmentClassSelect;
     Set<String> assessmentClassSet;
-
     Scene mainScene;
-
     Stage primaryStage;
 
     @Override
@@ -45,6 +46,10 @@ public class PropertyAssessmentApplication extends Application {
         mainHBox.setPadding(new Insets(10, 10, 10, 10));
         mainScene = new Scene(mainHBox, 1500, 1000);
         this.primaryStage.setScene(mainScene);
+
+        dataFont = Font.font("Arial", 20);
+        headingFont = Font.font("Arial", FontWeight.BOLD, 20);
+        titleFont = Font.font("Arial", FontWeight.BOLD, 30);
 
         VBox tabVBox = createTabVBox();
         tabVBox.prefWidthProperty().bind(mainHBox.widthProperty().multiply(0.80));
@@ -66,13 +71,17 @@ public class PropertyAssessmentApplication extends Application {
         primaryStage.show();
     }
 
+    private VBox createOverviewVBox() {
+        HBox detailsHBox = new HBox();
+
+        return new VBox();
+    }
+
     private VBox createTabVBox() {
         VBox tableVBox =  createTableVBox();
-
+        VBox overviewVBox = createOverviewVBox();
         Tab overviewTab = new Tab("Overview");
         Tab tableTab = new Tab("Property Assessment List", tableVBox);
-
-
 
         overviewTab.setClosable(false);
         tableTab.setClosable(false);
@@ -211,7 +220,6 @@ public class PropertyAssessmentApplication extends Application {
 
     /**
      * Function called when the search button is pressed.
-     *
      * Populates the table with the filtered data from the data source
      */
     private void search() {
@@ -430,23 +438,23 @@ public class PropertyAssessmentApplication extends Application {
         return backButton;
     }
 
-    /**
-     * Creates the VBox for displaying the current assessment data
-     * @param propertyAssessment the property assessment whose data is to be displayed
-     * @return the VBox containing a property assessment's current assessment data
-     */
-    private VBox createPropertyAssessmentCurrentInformationVBox(PropertyAssessment propertyAssessment) {
-        Label accountNumberTitle = new Label("Account Number:");
-        Label accountNumber = new Label(Integer.toString(propertyAssessment.getAccountNumber()));
-        VBox accountNumberVBox = new VBox(accountNumberTitle, accountNumber);
+    private VBox createDataVBox (String title, String value){
+        Text textTitle = new Text(title);
+        Text textValue = new Text(value);
+        textTitle.setFont(dataFont);
+        textValue.setFont(dataFont);
+        VBox dataVBox = new VBox(textTitle, textValue);
+        dataVBox.setPadding(new Insets(0, 0, 10, 0));
 
-        Label addressTitle = new Label("Address:");
-        Address propertyAssessmentAddress = propertyAssessment.getAddress();
+        return dataVBox;
+    }
+
+    private VBox createAddressVBox(Address address) {
         StringBuilder addressString = new StringBuilder();
 
-        String suite = propertyAssessmentAddress.suite();
-        String houseNumber = propertyAssessmentAddress.houseNumber();
-        String street = propertyAssessmentAddress.street();
+        String suite = address.suite();
+        String houseNumber = address.houseNumber();
+        String street = address.street();
 
         if(!suite.equals("")){
             addressString.append(suite).append(" ");
@@ -460,10 +468,56 @@ public class PropertyAssessmentApplication extends Application {
             addressString.append(street);
         }
 
-        Label address = new Label(addressString.toString());
-        VBox addressVBox = new VBox(addressTitle, address);
+        return createDataVBox("Address:", addressString.toString());
+    }
 
-        return new VBox(accountNumberVBox, addressVBox);
+    private Label createLable(String labelText, Font font){
+        Label label = new Label(labelText);
+        label.setFont(font);
+        label.setPadding(new Insets(0, 0, 10, 0));
+
+        return label;
+    }
+
+    private VBox createSpecificsHBox(PropertyAssessment propertyAssessment) {
+        Label specificsLabel = createLable("Property Specifics", headingFont);
+
+        VBox accountNumberVBox = createDataVBox("Account Number:", Integer.toString(propertyAssessment.getAccountNumber()));
+
+        VBox addressVBox = createAddressVBox(propertyAssessment.getAddress());
+
+        VBox neighbourhoodVBox = createDataVBox("Neighbourhood", propertyAssessment.getNeighbourhood());
+
+        return new VBox(specificsLabel, accountNumberVBox, addressVBox, neighbourhoodVBox);
+    }
+
+    private VBox createCurrentDataVBox(PropertyAssessment propertyAssessment) {
+        Label currentDataLabel = createLable("Current Data", headingFont);
+
+        VBox currentValueVBox = createDataVBox("Current Value", "$" + propertyAssessment.getAssessedValue());
+
+        return new VBox(currentDataLabel, currentValueVBox);
+    }
+
+    /**
+     * Creates the VBox for displaying the current assessment data
+     * @param propertyAssessment the property assessment whose data is to be displayed
+     * @return the VBox containing a property assessment's current assessment data
+     */
+    private HBox createPropertyAssessmentCurrentInformationHBox(PropertyAssessment propertyAssessment) {
+        VBox specificsVBox = createSpecificsHBox(propertyAssessment);
+        VBox currentDataHBox = createCurrentDataVBox(propertyAssessment);
+
+        HBox propertyAssessmentCurrentInformationHBox = new HBox();
+
+        specificsVBox.prefWidthProperty().bind(propertyAssessmentCurrentInformationHBox.widthProperty().multiply(.5));
+        currentDataHBox.prefWidthProperty().bind(propertyAssessmentCurrentInformationHBox.widthProperty().multiply(.5));
+
+        specificsVBox.setPadding(new Insets(0, 0, 0, 50));
+
+        propertyAssessmentCurrentInformationHBox.getChildren().addAll(specificsVBox, currentDataHBox);
+
+        return propertyAssessmentCurrentInformationHBox;
     }
 
     /**
@@ -473,7 +527,7 @@ public class PropertyAssessmentApplication extends Application {
     HBox createPropertyAssessmentHeader() {
         Button backButton = setupBackButton();
         Label propertyAssessmentTitle = new Label("Property Assessment");
-        propertyAssessmentTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        propertyAssessmentTitle.setFont(titleFont);
 
         HBox headerHBox = new HBox(backButton, propertyAssessmentTitle);
 
@@ -492,9 +546,13 @@ public class PropertyAssessmentApplication extends Application {
      */
     private VBox createPropertyAssessmentVBox(PropertyAssessment propertyAssessment) {
         HBox propertyAssessmentHeader = createPropertyAssessmentHeader();
-        VBox currentInformationVBox = createPropertyAssessmentCurrentInformationVBox(propertyAssessment);
+        HBox currentInformationVBox = createPropertyAssessmentCurrentInformationHBox(propertyAssessment);
 
         currentInformationVBox.setPadding(new Insets(30, 10, 10, 10));
+
+        VBox propertyAssessmentVBox = new VBox();
+
+        currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
         return new VBox(propertyAssessmentHeader, currentInformationVBox);
     }
