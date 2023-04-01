@@ -370,7 +370,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
          * @param neighbourhood the neighbourhood to search for
          * @return A query string for filtering by neighbourhood, or an empty string if no neighbourhood is given
          */
-        private String createNeighbourhoodQuery(String neighbourhood) {
+        private static String createNeighbourhoodQuery(String neighbourhood) {
             return !neighbourhood.isEmpty() ? "neighbourhood_name like '" + neighbourhood.toUpperCase() + "%'" : "";
         }
 
@@ -380,7 +380,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
          * @param area the part of edmonton to filter by (north, south, east, west, or central)
          * @return A query string for filtering by area, or an empty string if no area is given
          */
-        private String createAreaQuery(String area) {
+        private static String createAreaQuery(String area) {
             return switch (area) {
                 case "North" -> "latitude>53.5590";
                 case "South" -> "latitude<53.5180";
@@ -399,7 +399,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
          * @param max the maximum year to filter by
          * @return A string for filtering by the year a property was built, or an empty string if no values are given
          */
-        private String createYearBuiltRangeQuery(int min, int max) {
+        private static String createYearBuiltRangeQuery(int min, int max) {
             String minString = "";
             String maxString = "";
 
@@ -425,7 +425,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
          * @param filter A filter object that contains the fields to be filtered for
          * @return An amalgamated query for all the fields specified in the provided filter
          */
-        private String createFilterQueryString(Filter filter) {
+        private static String createFilterQueryString(Filter filter) {
             StringBuilder query = new StringBuilder();
 
             String neighbourhoodQuery = createNeighbourhoodQuery(filter.getNeighbourhood());
@@ -460,9 +460,9 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
          * @param filter A filter object that contains the fields to be filtered for
          * @return A list of integers, where List[i] is the average value of filtered properties 10 - i years ago
          */
-        public List<Integer> getAvgHistoricalValues(Filter filter) {
+        public static List<Integer> getAvgHistoricalValues(Filter filter) {
             String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
-                            createFilterQueryString(filter) + "&assessed_year=";
+                            createFilterQueryString(filter) + "&assessment_year=";
 
             int year = Year.now().getValue() - 11;
             List<Integer> values = new ArrayList<>();
@@ -470,13 +470,12 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             while (year < Year.now().getValue()) {
                 String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
                 values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-
                 year++;
             }
             return values;
         }
 
-        private String callEndpoint(String query) {
+        private static String callEndpoint(String query) {
             String url = historicalApiEndpoint + query;
             HttpClient client = HttpClient.newHttpClient();
 
