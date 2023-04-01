@@ -191,6 +191,21 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public double max(Filter filter) {
+        return 0;
+    }
+
+    @Override
+    public double min(Filter filter) {
+        return 0;
+    }
+
+    @Override
+    public double average(Filter filter) {
+        return 0;
+    }
+
     /**
      * Returns a copy of the list of all property assessments
      *

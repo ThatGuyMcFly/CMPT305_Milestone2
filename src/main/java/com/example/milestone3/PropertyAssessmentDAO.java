@@ -13,4 +13,8 @@ public interface PropertyAssessmentDAO {
     Set<String> getAssessmentClasses();
     List<PropertyAssessment> getByAssessedValueMinimum(int min);
     List<PropertyAssessment> getByAssessedValueMaximum(int max);
+    double max(Filter filter);
+    double min(Filter filter);
+    double average(Filter filter);
+    class HistoricalAssessmentsDAO{}
 }
