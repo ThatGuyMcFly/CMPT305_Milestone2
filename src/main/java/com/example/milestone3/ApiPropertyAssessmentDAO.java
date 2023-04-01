@@ -512,15 +512,27 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return query.toString();
         }
 
+        public static List<Integer> getMaxHistoricalValues(Filter filter) {
+            return getHistoricalValues("max", filter);
+        }
+
+        public static List<Integer> getMinHistoricalValues(Filter filter) {
+            return getHistoricalValues("min", filter);
+        }
+
+        public static List<Integer> getAverageHistoricalValues(Filter filter) {
+            return getHistoricalValues("avg", filter);
+        }
+
         /**
          * get a list of average property values for the past 10 years using a given filter
          *
          * @param filter A filter object that contains the fields to be filtered for
          * @return A list of integers, where List[i] is the average value of filtered properties 10 - i years ago
          */
-        public static List<Integer> getAvgHistoricalValues(Filter filter) {
-            String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
-                            createFilterQueryString(filter) + "&assessment_year=";
+        private static List<Integer> getHistoricalValues(String minMaxAverage, Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select="+ minMaxAverage +"(assessed_value) where" +
+                            createFilterQueryString(filter) + " and assessment_year=";
 
             int year = Year.now().getValue() - 11;
             List<Integer> values = new ArrayList<>();
