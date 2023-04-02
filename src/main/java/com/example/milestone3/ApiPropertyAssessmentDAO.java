@@ -199,6 +199,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
      * @return a query for a neighbourhood or an empty string is neighbourhood is empty
      */
     private String createNeighbourhoodQuery(String neighbourhood) {
+
         if(neighbourhood.isEmpty()) {
             return "";
         }

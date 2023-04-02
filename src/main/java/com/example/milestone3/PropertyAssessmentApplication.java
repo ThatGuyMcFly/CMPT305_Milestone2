@@ -35,6 +35,7 @@ public class PropertyAssessmentApplication extends Application {
     private ComboBox<String> sourceSelect;
     private ObservableList<String> assessmentClasses;
     private LineChart<String, Float> graph= overviewGraph();
+    private LineChart<String, Float> graph2= specificGraph();
     private Font dataFont;
     private Font headingFont;
     private Font titleFont;
@@ -81,60 +82,6 @@ public class PropertyAssessmentApplication extends Application {
         mainHBox.getChildren().addAll(selectionVBox, tabVBox);
         primaryStage.show();
     }
-
-    private void overviewGUpdate(){
-        this.graph.getData().clear();
-
-
-        XYChart.Series series1 = new XYChart.Series();
-        Filter filter = buildFilter();
-
-        List<Integer> his;
-        his= ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
-        System.out.println(his);
-
-        series1.setName("AVG Value");
-
-        for(int i=0; i < 11; i++){
-            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
-        }
-
-        XYChart.Series series2 = new XYChart.Series();
-        series2.setName("Min Value");
-
-        his = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
-        System.out.println(his);
-        for(int i=0; i < 11; i++){
-            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
-        }
-
-        XYChart.Series series3 = new XYChart.Series();
-        series3.setName("Max Value");
-
-        his = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
-        for(int i=0; i < 11; i++){
-            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
-        }
-
-        this.graph.getData().addAll(series1,series2,series3);
-
-
-    }
-
-    private LineChart<String,Float> overviewGraph(){
-
-        final CategoryAxis xAxis = new CategoryAxis();
-        final NumberAxis yAxis = new NumberAxis(0,2,0.2);
-        xAxis.setLabel("Year");
-        final LineChart<String,Float> lineChart =
-                new LineChart(xAxis,yAxis);
-        lineChart.setPrefHeight(700);
-        lineChart.setTitle("10 Year Growth");
-
-        return lineChart;
-    }
-
-
 
 
     /**
@@ -760,8 +707,9 @@ public class PropertyAssessmentApplication extends Application {
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
         List<Integer> historicalValues = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+        specificGUpdate(historicalValues);
 
-        return new VBox(propertyAssessmentHeader, currentInformationVBox);
+        return new VBox(propertyAssessmentHeader, currentInformationVBox, graph2);
     }
 
     /**
@@ -902,6 +850,96 @@ public class PropertyAssessmentApplication extends Application {
 
         return tableVBox;
     }
+
+
+    /**
+     * update overview graph with new info on new search
+     */
+    private void overviewGUpdate(){
+        this.graph.getData().clear();
+
+        Filter filter = buildFilter();
+
+        List<Integer> hist;
+        hist= ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+
+        XYChart.Series series1 = new XYChart.Series();
+        series1.setName("AVG Value");
+
+        for(int i=0; i < 11; i++){
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+        }
+
+        XYChart.Series series2 = new XYChart.Series();
+        series2.setName("Min Value");
+
+        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
+        System.out.println(hist);
+        for(int i=0; i < 11; i++){
+            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+        }
+
+        XYChart.Series series3 = new XYChart.Series();
+        series3.setName("Max Value");
+
+        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
+        for(int i=0; i < 11; i++){
+            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+        }
+
+        this.graph.getData().addAll(series1,series2,series3);
+    }
+
+    /**
+     * update specific graph on page open
+     * @param hist
+     */
+    private void specificGUpdate(List<Integer> hist){
+        this.graph2.getData().clear();
+
+        XYChart.Series series1 = new XYChart.Series();
+        series1.setName("Value");
+
+        for(int i=0; i < 11; i++){
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)));
+        }
+
+        this.graph2.getData().addAll(series1);
+    }
+
+    /**
+     * Initialize graph on overview tab
+     * @return Line chart
+     */
+    private LineChart<String,Float> overviewGraph(){
+
+        final CategoryAxis xAxis = new CategoryAxis();
+        final NumberAxis yAxis = new NumberAxis(0,2,0.2);
+        xAxis.setLabel("Year");
+        LineChart<String,Float> lineChart =
+                new LineChart(xAxis,yAxis);
+        lineChart.setPrefHeight(700);
+        lineChart.setTitle("10 Year Growth");
+
+        return lineChart;
+    }
+
+    /**
+     * Initialize graph on specific property page
+     */
+    private LineChart<String,Float> specificGraph(){
+
+        final CategoryAxis xAxis = new CategoryAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Year");
+        yAxis.setLabel("Value($)");
+        LineChart<String,Float> lineChart =
+                new LineChart(xAxis,yAxis);
+        lineChart.setPrefHeight(700);
+
+        return lineChart;
+    }
+
 
     public static void main(String[] args) {
         launch();
