@@ -6,6 +6,10 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
@@ -30,6 +34,7 @@ public class PropertyAssessmentApplication extends Application {
     private TextField maxValueTextField = new TextField();
     private ComboBox<String> sourceSelect;
     private ObservableList<String> assessmentClasses;
+    private LineChart<String, Float> graph= overviewGraph();
     private Font dataFont;
     private Font headingFont;
     private Font titleFont;
@@ -76,6 +81,61 @@ public class PropertyAssessmentApplication extends Application {
         mainHBox.getChildren().addAll(selectionVBox, tabVBox);
         primaryStage.show();
     }
+
+    private void overviewGUpdate(){
+        this.graph.getData().clear();
+
+
+        XYChart.Series series1 = new XYChart.Series();
+        Filter filter = buildFilter();
+
+        List<Integer> his;
+        his= ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+        System.out.println(his);
+
+        series1.setName("AVG Value");
+
+        for(int i=0; i < 11; i++){
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
+        }
+
+        XYChart.Series series2 = new XYChart.Series();
+        series2.setName("Min Value");
+
+        his = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
+        System.out.println(his);
+        for(int i=0; i < 11; i++){
+            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
+        }
+
+        XYChart.Series series3 = new XYChart.Series();
+        series3.setName("Max Value");
+
+        his = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
+        for(int i=0; i < 11; i++){
+            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)his.get(i)/(float)his.get(0)));
+        }
+
+        this.graph.getData().addAll(series1,series2,series3);
+
+
+    }
+
+    private LineChart<String,Float> overviewGraph(){
+
+        final CategoryAxis xAxis = new CategoryAxis();
+        final NumberAxis yAxis = new NumberAxis(0,2,0.2);
+        xAxis.setLabel("Year");
+        final LineChart<String,Float> lineChart =
+                new LineChart(xAxis,yAxis);
+        lineChart.setPrefHeight(700);
+        lineChart.setTitle("10 Year Growth");
+
+        return lineChart;
+    }
+
+
+
 
     /**
      * Sets up a VBox that has a title and text box to be filled in later
@@ -139,7 +199,8 @@ public class PropertyAssessmentApplication extends Application {
     private VBox createOverviewVBox() {
         HBox detailsHBox = createDetailsHBox();
         Label overViewLabel = createLabel("Property Assessments Overview", titleFont);
-        return new VBox(overViewLabel, detailsHBox);
+        //overViewVBox.prefHeightProperty().bind(primaryStage.heightProperty().multiply(31.80));
+        return new VBox(overViewLabel, detailsHBox, graph);
     }
 
     /**
@@ -172,6 +233,9 @@ public class PropertyAssessmentApplication extends Application {
      * @return a populated Filter
      */
     private Filter buildFilter() {
+
+        if (this.assessmentClassSelect == null) return null;
+
         String address = addressTextField.getText();
         String neighbourhood = neighbourhoodTextField.getText();
         String assessmentClass = assessmentClassSelect.getValue();
@@ -269,6 +333,7 @@ public class PropertyAssessmentApplication extends Application {
         }
 
         populateOverview();
+        overviewGUpdate();
     }
 
     /**
@@ -348,6 +413,7 @@ public class PropertyAssessmentApplication extends Application {
                 propertyAssessments.clear();
                 propertyAssessments.add(propertyAssessment);
                 populateOverview();
+                overviewGUpdate();
             }
         } else {
 
@@ -358,6 +424,7 @@ public class PropertyAssessmentApplication extends Application {
                 propertyAssessments.clear();
                 propertyAssessments.addAll(getFilteredList());
                 populateOverview();
+                overviewGUpdate();
             }
         }
     }

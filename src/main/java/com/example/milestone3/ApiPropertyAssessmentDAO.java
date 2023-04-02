@@ -533,6 +533,37 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return values;
         }
 
+
+        public static List<Integer> getAvgHistoricalMin(Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
+                    createFilterQueryString(filter) + "&assessment_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+            return values;
+        }
+
+        public static List<Integer> getAvgHistoricalMax(Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
+                    createFilterQueryString(filter) + "&assessment_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+            return values;
+        }
+
         /**
          * Gets the index of a string within in an array of strings
          *
