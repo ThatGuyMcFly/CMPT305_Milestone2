@@ -199,6 +199,7 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
      * @return a query for a neighbourhood or an empty string is neighbourhood is empty
      */
     private String createNeighbourhoodQuery(String neighbourhood) {
+
         if(neighbourhood.isEmpty()) {
             return "";
         }
@@ -521,6 +522,46 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         public static List<Integer> getAvgHistoricalValues(Filter filter) {
             String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
                             createFilterQueryString(filter) + "&assessment_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+            return values;
+        }
+
+        /**
+         * copy of getAvgHistoricalValues() but get min easy, for graphs. Modularize?
+         * @param filter -  filter object
+         * @return list of min values of year
+         */
+        public static List<Integer> getAvgHistoricalMin(Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
+                    createFilterQueryString(filter) + "&assessment_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+            return values;
+        }
+
+        /**
+         * copy of getAvgHistoricalValues() but get max for graphs.
+         * @param filter - filter object
+         * @return list of max values
+         */
+        public static List<Integer> getAvgHistoricalMax(Filter filter) {
+            String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
+                    createFilterQueryString(filter) + "&assessment_year=";
 
             int year = Year.now().getValue() - 11;
             List<Integer> values = new ArrayList<>();

@@ -6,6 +6,10 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
@@ -30,6 +34,8 @@ public class PropertyAssessmentApplication extends Application {
     private TextField maxValueTextField = new TextField();
     private ComboBox<String> sourceSelect;
     private ObservableList<String> assessmentClasses;
+    private LineChart<String, Float> graph= overviewGraph();
+    private LineChart<String, Float> graph2= specificGraph();
     private Font dataFont;
     private Font headingFont;
     private Font titleFont;
@@ -76,6 +82,7 @@ public class PropertyAssessmentApplication extends Application {
         mainHBox.getChildren().addAll(selectionVBox, tabVBox);
         primaryStage.show();
     }
+
 
     /**
      * Sets up a VBox that has a title and text box to be filled in later
@@ -139,7 +146,8 @@ public class PropertyAssessmentApplication extends Application {
     private VBox createOverviewVBox() {
         HBox detailsHBox = createDetailsHBox();
         Label overViewLabel = createLabel("Property Assessments Overview", titleFont);
-        return new VBox(overViewLabel, detailsHBox);
+        //overViewVBox.prefHeightProperty().bind(primaryStage.heightProperty().multiply(31.80));
+        return new VBox(overViewLabel, detailsHBox, graph);
     }
 
     /**
@@ -172,6 +180,9 @@ public class PropertyAssessmentApplication extends Application {
      * @return a populated Filter
      */
     private Filter buildFilter() {
+
+        if (this.assessmentClassSelect == null) return null;
+
         String address = addressTextField.getText();
         String neighbourhood = neighbourhoodTextField.getText();
         String assessmentClass = assessmentClassSelect.getValue();
@@ -269,6 +280,7 @@ public class PropertyAssessmentApplication extends Application {
         }
 
         populateOverview();
+        overviewGUpdate();
     }
 
     /**
@@ -348,6 +360,7 @@ public class PropertyAssessmentApplication extends Application {
                 propertyAssessments.clear();
                 propertyAssessments.add(propertyAssessment);
                 populateOverview();
+                overviewGUpdate();
             }
         } else {
 
@@ -358,6 +371,7 @@ public class PropertyAssessmentApplication extends Application {
                 propertyAssessments.clear();
                 propertyAssessments.addAll(getFilteredList());
                 populateOverview();
+                overviewGUpdate();
             }
         }
     }
@@ -693,8 +707,9 @@ public class PropertyAssessmentApplication extends Application {
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
         List<Integer> historicalValues = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+        specificGUpdate(historicalValues);
 
-        return new VBox(propertyAssessmentHeader, currentInformationVBox);
+        return new VBox(propertyAssessmentHeader, currentInformationVBox, graph2);
     }
 
     /**
@@ -835,6 +850,95 @@ public class PropertyAssessmentApplication extends Application {
 
         return tableVBox;
     }
+
+
+    /**
+     * Graphs
+     *
+     * update overview graph with new info on new search
+     */
+    private void overviewGUpdate(){
+        this.graph.getData().clear();
+
+        Filter filter = buildFilter();
+        List<Integer> hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+
+        XYChart.Series series1 = new XYChart.Series();
+        series1.setName("AVG Value");
+
+        for(int i=0; i < 11; i++){
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
+        }
+
+        XYChart.Series series2 = new XYChart.Series();
+        series2.setName("Min Value");
+
+        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
+        for(int i=0; i < 11; i++){
+            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
+        }
+
+        XYChart.Series series3 = new XYChart.Series();
+        series3.setName("Max Value");
+        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
+        for(int i=0; i < 11; i++){
+            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
+        }
+
+        this.graph.getData().addAll(series1,series2,series3);
+    }
+
+    /**
+     * update specific graph on page open
+     * @param hist
+     */
+    private void specificGUpdate(List<Integer> hist){
+        this.graph2.getData().clear();
+
+        XYChart.Series series1 = new XYChart.Series();
+        series1.setName("Value");
+
+        for(int i=0; i < 11; i++){
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)));
+        }
+
+        this.graph2.getData().addAll(series1);
+    }
+
+    /**
+     * Initialize graph on overview tab
+     * @return Line chart
+     */
+    private LineChart<String,Float> overviewGraph(){
+
+        final CategoryAxis xAxis = new CategoryAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Year");
+        yAxis.setLabel("Percent Change(%)");
+        LineChart<String,Float> lineChart =
+                new LineChart(xAxis,yAxis);
+        lineChart.setPrefHeight(700);
+        lineChart.setTitle("10 Year Growth");
+
+        return lineChart;
+    }
+
+    /**
+     * Initialize graph on specific property page
+     */
+    private LineChart<String,Float> specificGraph(){
+
+        final CategoryAxis xAxis = new CategoryAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Year");
+        yAxis.setLabel("Value($)");
+        LineChart<String,Float> lineChart =
+                new LineChart(xAxis,yAxis);
+        lineChart.setPrefHeight(700);
+
+        return lineChart;
+    }
+
 
     public static void main(String[] args) {
         launch();
