@@ -853,6 +853,8 @@ public class PropertyAssessmentApplication extends Application {
 
 
     /**
+     * Graphs
+     *
      * update overview graph with new info on new search
      */
     private void overviewGUpdate(){
@@ -867,7 +869,7 @@ public class PropertyAssessmentApplication extends Application {
         series1.setName("AVG Value");
 
         for(int i=0; i < 11; i++){
-            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
         }
 
         XYChart.Series series2 = new XYChart.Series();
@@ -876,7 +878,7 @@ public class PropertyAssessmentApplication extends Application {
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
         System.out.println(hist);
         for(int i=0; i < 11; i++){
-            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
         }
 
         XYChart.Series series3 = new XYChart.Series();
@@ -884,7 +886,7 @@ public class PropertyAssessmentApplication extends Application {
 
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
         for(int i=0; i < 11; i++){
-            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)/(float)hist.get(0)));
+            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
         }
 
         this.graph.getData().addAll(series1,series2,series3);
@@ -914,8 +916,9 @@ public class PropertyAssessmentApplication extends Application {
     private LineChart<String,Float> overviewGraph(){
 
         final CategoryAxis xAxis = new CategoryAxis();
-        final NumberAxis yAxis = new NumberAxis(0,2,0.2);
+        final NumberAxis yAxis = new NumberAxis();
         xAxis.setLabel("Year");
+        yAxis.setLabel("Percent Change(%)");
         LineChart<String,Float> lineChart =
                 new LineChart(xAxis,yAxis);
         lineChart.setPrefHeight(700);
