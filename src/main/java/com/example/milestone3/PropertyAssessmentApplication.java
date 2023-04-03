@@ -861,9 +861,7 @@ public class PropertyAssessmentApplication extends Application {
         this.graph.getData().clear();
 
         Filter filter = buildFilter();
-
-        List<Integer> hist;
-        hist= ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+        List<Integer> hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
 
         XYChart.Series series1 = new XYChart.Series();
         series1.setName("AVG Value");
@@ -876,14 +874,12 @@ public class PropertyAssessmentApplication extends Application {
         series2.setName("Min Value");
 
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
-        System.out.println(hist);
         for(int i=0; i < 11; i++){
             series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
         }
 
         XYChart.Series series3 = new XYChart.Series();
         series3.setName("Max Value");
-
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
         for(int i=0; i < 11; i++){
             series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
