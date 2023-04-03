@@ -534,7 +534,11 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return values;
         }
 
-
+        /**
+         * copy of getAvgHistoricalValues() but get min easy, for graphs. Modularize?
+         * @param filter -  filter object
+         * @return list of min values of year
+         */
         public static List<Integer> getAvgHistoricalMin(Filter filter) {
             String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
                     createFilterQueryString(filter) + "&assessment_year=";
@@ -550,6 +554,11 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             return values;
         }
 
+        /**
+         * copy of getAvgHistoricalValues() but get max for graphs.
+         * @param filter - filter object
+         * @return list of max values
+         */
         public static List<Integer> getAvgHistoricalMax(Filter filter) {
             String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
                     createFilterQueryString(filter) + "&assessment_year=";
