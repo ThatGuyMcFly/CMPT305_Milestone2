@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Year;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 
@@ -514,65 +515,71 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
 
         /**
-         * get a list of average property values for the past 10 years using a given filter
+         * get a list of average property values for the past 10 years using a given filter. Runs asynchronously
          *
          * @param filter A filter object that contains the fields to be filtered for
-         * @return A list of integers, where List[i] is the average value of filtered properties 10 - i years ago
+         * @return A promise that resolves to a list of integers,
+         *         where List[i] is the average value of filtered properties 10 - i years ago
          */
-        public static List<Integer> getAvgHistoricalValues(Filter filter) {
-            String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
-                            createFilterQueryString(filter) + "&assessment_year=";
+        public static CompletableFuture<List<Integer>> getAvgHistoricalValues(Filter filter) {
+            return CompletableFuture.supplyAsync(() -> {
+                String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
+                        createFilterQueryString(filter) + "&assessment_year=";
 
-            List<Integer> values = new ArrayList<>();
-            int year = Year.now().getValue() - 11;
+                List<Integer> values = new ArrayList<>();
+                int year = Year.now().getValue() - 11;
 
-            while (year < Year.now().getValue()) {
-                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1) ;
-                year++;
-            }
-
-            return values;
+                while (year < Year.now().getValue()) {
+                    String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1) ;
+                    year++;
+                }
+                return values;
+            });
         }
 
         /**
-         * copy of getAvgHistoricalValues() but get min easy, for graphs. Modularize?
+         * copy of getAvgHistoricalValues() but get min for graphs. Runs asynchronously to prevent timeouts
          * @param filter -  filter object
-         * @return list of min values of year
+         * @return a promise that resolves to a list of average minimum values
          */
-        public static List<Integer> getAvgHistoricalMin(Filter filter) {
-            String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
-                    createFilterQueryString(filter) + "&assessment_year=";
+        public static CompletableFuture<List<Integer>> getAvgHistoricalMin(Filter filter) {
+            return CompletableFuture.supplyAsync(() -> {
+                String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
+                        createFilterQueryString(filter) + "&assessment_year=";
 
-            int year = Year.now().getValue() - 11;
-            List<Integer> values = new ArrayList<>();
+                int year = Year.now().getValue() - 11;
+                List<Integer> values = new ArrayList<>();
 
-            while (year < Year.now().getValue()) {
-                String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                year++;
-            }
-            return values;
+                while (year < Year.now().getValue()) {
+                    String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
+                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                    year++;
+                }
+                return values;
+            });
         }
 
         /**
-         * copy of getAvgHistoricalValues() but get max for graphs.
+         * copy of getAvgHistoricalValues() but get max for graphs. Runs asynchronously to prevent timeouts
          * @param filter - filter object
-         * @return list of max values
+         * @return a promise that resolves to a list of average maximum values
          */
-        public static List<Integer> getAvgHistoricalMax(Filter filter) {
-            String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
-                    createFilterQueryString(filter) + "&assessment_year=";
+        public static CompletableFuture<List<Integer>> getAvgHistoricalMax(Filter filter) {
+            return CompletableFuture.supplyAsync(() -> {
+                String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
+                        createFilterQueryString(filter) + "&assessment_year=";
 
-            int year = Year.now().getValue() - 11;
-            List<Integer> values = new ArrayList<>();
+                int year = Year.now().getValue() - 11;
+                List<Integer> values = new ArrayList<>();
 
-            while (year < Year.now().getValue()) {
-                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                year++;
-            }
-            return values;
+                while (year < Year.now().getValue()) {
+                    String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                    year++;
+                }
+                return values;
+            });
         }
 
         /**
@@ -636,24 +643,27 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
 
         /**
-         * Gets a list of historical assessment values of a specified property assessment
+         * Gets a list of historical assessment values of a specified property assessment. Runs asynchronously to
+         * reduce timeouts
          * @param account_number The account number of the specific property assessment
-         * @return a list of historical assessment values where years without data are stored as -1
+         * @return a promise that resolves to a list of assessed property values for each year
          */
-        public static List<Integer> getHistoricalPropertyValuesByAccountNumber(int account_number) {
-            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" + account_number + "' and assessment_year='";
+        public static CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number) {
+            return CompletableFuture.supplyAsync(() -> {
+                String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" +
+                                account_number + "' and assessment_year='";
 
-            int year = Year.now().getValue() - 11;
-            List<Integer> values = new ArrayList<>();
+                int year = Year.now().getValue() - 11;
+                List<Integer> values = new ArrayList<>();
 
-            while (year < Year.now().getValue()) {
-                String newQuery = query + year + "'";
-                String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                year++;
-            }
-
-            return values;
+                while (year < Year.now().getValue()) {
+                    String newQuery = query + year + "'";
+                    String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
+                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                    year++;
+                }
+                return values;
+            });
         }
 
         /**

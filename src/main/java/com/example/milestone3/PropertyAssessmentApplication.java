@@ -1,6 +1,7 @@
 package com.example.milestone3;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public class PropertyAssessmentApplication extends Application {
     private ObservableList<PropertyAssessment> propertyAssessments;
@@ -724,7 +726,9 @@ public class PropertyAssessmentApplication extends Application {
 
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
-        List<Integer> historicalValues = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+        CompletableFuture<List<Integer>> historicalValues =
+                ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+
         specificGUpdate(historicalValues);
 
         return new VBox(propertyAssessmentHeader, currentInformationVBox, graph2);
@@ -871,55 +875,74 @@ public class PropertyAssessmentApplication extends Application {
 
 
     /**
-     * Graphs
      *
      * update overview graph with new info on new search
      */
     private void overviewGUpdate(){
         this.graph.getData().clear();
 
-        Filter filter = buildFilter();
-        List<Integer> hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
-
-
         XYChart.Series series1 = new XYChart.Series();
         series1.setName("Average Value");
 
-        for(int i=0; i < 11; i++){
-            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
-        }
+        Filter filter = buildFilter();
+        CompletableFuture<List<Integer>> futureAvgs = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+
+        futureAvgs.thenAccept( vals -> {
+            Platform.runLater(() -> {
+                for(int i=0; i < 11; i++){
+                    series1.getData().add(
+                            new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
+                    );
+                }
+            });
+        });
 
         XYChart.Series series2 = new XYChart.Series();
         series2.setName("Minimum Value");
 
-        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
-        for(int i=0; i < 11; i++){
-            series2.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
-        }
+        CompletableFuture<List<Integer>> futureMins = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
+        futureMins.thenAccept( vals -> {
+            Platform.runLater(() -> {
+                for(int i=0; i < 11; i++){
+                    series2.getData().add(
+                            new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
+                    );
+                }
+            });
+        });
 
         XYChart.Series series3 = new XYChart.Series();
         series3.setName("Maximum Value");
-        hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
-        for(int i=0; i < 11; i++){
-            series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
-        }
+        CompletableFuture<List<Integer>> futureMaxs = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
+        futureMaxs.thenAccept( vals -> {
+            Platform.runLater(() -> {
+                for(int i=0; i < 11; i++){
+                    series3.getData().add(
+                            new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
+                    );
+                }
+            });
+        });
 
         this.graph.getData().addAll(series1,series2,series3);
     }
 
     /**
      * update specific graph on page open
-     * @param hist
+     * @param historicalVals a promise that resolves to a list of property values used to poopulate the graph
      */
-    private void specificGUpdate(List<Integer> hist){
+    private void specificGUpdate(CompletableFuture<List<Integer>> historicalVals){
         this.graph2.getData().clear();
 
         XYChart.Series series1 = new XYChart.Series();
         series1.setName("Value");
 
-        for(int i=0; i < 11; i++){
-            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)));
-        }
+        historicalVals.thenAccept( vals -> {
+            Platform.runLater(() -> {
+                for(int i=0; i < 11; i++)
+                    series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)vals.get(i)));
+            });
+        });
 
         this.graph2.getData().addAll(series1);
     }
