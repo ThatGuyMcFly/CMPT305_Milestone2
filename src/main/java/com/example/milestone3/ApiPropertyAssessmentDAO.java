@@ -420,331 +420,306 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
     }
 
-    // Static class for getting historical property assessment data
-    public static class HistoricalAssessmentsDAO {
 
 
-        /**
-         * Creates a query for selecting properties in a specific neighbourhood
-         *
-         * @param neighbourhood the neighbourhood to search for
-         * @return A query string for filtering by neighbourhood, or an empty string if no neighbourhood is given
-         */
-        private static String createNeighbourhoodQuery(String neighbourhood) {
-            return !neighbourhood.isEmpty() ? "neighbourhood_name like '" + neighbourhood.toUpperCase() + "%'" : "";
+
+    /**
+     * Creates a query for selecting properties in a specific neighbourhood
+     *
+     * @param neighbourhood the neighbourhood to search for
+     * @return A query string for filtering by neighbourhood, or an empty string if no neighbourhood is given
+     */
+    private String createNeighbourhoodHistoricalQuery(String neighbourhood) {
+        return !neighbourhood.isEmpty() ? "neighbourhood_name like '" + neighbourhood.toUpperCase() + "%'" : "";
+    }
+
+    /**
+     * Creates a query for selecting properties in a specific area of edmonton
+     *
+     * @param area the part of edmonton to filter by (north, south, east, west, or central)
+     * @return A query string for filtering by area, or an empty string if no area is given
+     */
+    private String createAreaQuery(String area) {
+        return switch (area) {
+            case "North" -> "latitude>53.5590";
+            case "South" -> "latitude<53.5180";
+            case "West" -> "longitude<-113.5405";
+            case "East" -> "longitude>-113.4540";
+            case "Central" ->
+                    "(latitude<53.5590 and latitude>53.5180 and longitude>-113.5405 and longitude<-113.4540)";
+            default -> "";
+        };
+    }
+
+    /**
+     * Creates a query for selecting properties built in a specific range of years
+     *
+     * @param min the minimum year to filter by
+     * @param max the maximum year to filter by
+     * @return A string for filtering by the year a property was built, or an empty string if no values are given
+     */
+    private String createYearBuiltRangeQuery(int min, int max) {
+        String minString = "";
+        String maxString = "";
+
+        if (min < 0 && max < 0) {
+            return "";
         }
 
-        /**
-         * Creates a query for selecting properties in a specific area of edmonton
-         *
-         * @param area the part of edmonton to filter by (north, south, east, west, or central)
-         * @return A query string for filtering by area, or an empty string if no area is given
-         */
-        private static String createAreaQuery(String area) {
-            return switch (area) {
-                case "North" -> "latitude>53.5590";
-                case "South" -> "latitude<53.5180";
-                case "West" -> "longitude<-113.5405";
-                case "East" -> "longitude>-113.4540";
-                case "Central" ->
-                        "(latitude<53.5590 and latitude>53.5180 and longitude>-113.5405 and longitude<-113.4540)";
-                default -> "";
-            };
+        if (min < 0) {
+            maxString = " <= " + max;
+        } else if (max < 0) {
+            minString = " >= " + min;
+        } else {
+            minString = "between " + min;
+            maxString = " and " + max;
         }
 
-        /**
-         * Creates a query for selecting properties built in a specific range of years
-         *
-         * @param min the minimum year to filter by
-         * @param max the maximum year to filter by
-         * @return A string for filtering by the year a property was built, or an empty string if no values are given
-         */
-        private static String createYearBuiltRangeQuery(int min, int max) {
-            String minString = "";
-            String maxString = "";
+        return "year_built " + minString + maxString;
+    }
 
-            if (min < 0 && max < 0) {
-                return "";
+    /**
+     * Creates a query by combining all the appropriate queries as determined by the provided filter
+     *
+     * @param filter A filter object that contains the fields to be filtered for
+     * @return An amalgamated query for all the fields specified in the provided filter
+     */
+    private String createHistoricalFilterQueryString(Filter filter) {
+        StringBuilder query = new StringBuilder();
+
+        String neighbourhoodQuery = createNeighbourhoodHistoricalQuery(filter.getNeighbourhood());
+        query.append(neighbourhoodQuery);
+
+        // adds an AND between queries only if there are previous queries added and the filter field isn't the
+        // default value of the filter field
+        if(!query.isEmpty() && !filter.getArea().isEmpty()) {
+            query.append(" and ");
+        }
+        String areaQuery = createAreaQuery(filter.getArea());
+        query.append(areaQuery);
+
+        if(!query.isEmpty() && !filter.getAssessmentClass().isEmpty()) {
+            query.append(" and ");
+        }
+        String assessClassQuery = createAssessmentClassQuery(filter.getAssessmentClass());
+        query.append(assessClassQuery);
+
+        if(!query.isEmpty() && (filter.getMinimumYearBuilt() > -1 || filter.getMaximumYearBuilt() > -1)) {
+            query.append(" and ");
+        }
+        String yearRange = createYearBuiltRangeQuery(filter.getMinimumYearBuilt(), filter.getMaximumYearBuilt());
+        query.append(yearRange);
+
+        return query.toString();
+    }
+
+    /**
+     * get a list of average property values for the past 10 years using a given filter. Runs asynchronously
+     *
+     * @param filter A filter object that contains the fields to be filtered for
+     * @return A promise that resolves to a list of integers,
+     *         where List[i] is the average value of filtered properties 10 - i years ago
+     */
+    public CompletableFuture<List<Integer>> getAvgHistoricalValues(Filter filter) {
+        return CompletableFuture.supplyAsync(() -> {
+            String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
+                    createHistoricalFilterQueryString(filter) + "&assessment_year=";
+
+            List<Integer> values = new ArrayList<>();
+            int year = Year.now().getValue() - 11;
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1) ;
+                year++;
             }
+            return values;
+        });
+    }
 
-            if (min < 0) {
-                maxString = " <= " + max;
-            } else if (max < 0) {
-                minString = " >= " + min;
-            } else {
-                minString = "between " + min;
-                maxString = " and " + max;
+    /**
+     * copy of getAvgHistoricalValues() but get min for graphs. Runs asynchronously to prevent timeouts
+     * @param filter -  filter object
+     * @return a promise that resolves to a list of average minimum values
+     */
+    public CompletableFuture<List<Integer>> getAvgHistoricalMin(Filter filter) {
+        return CompletableFuture.supplyAsync(() -> {
+            String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
+                    createHistoricalFilterQueryString(filter) + "&assessment_year=";
+
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
+
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
             }
+            return values;
+        });
+    }
 
-            return "year_built " + minString + maxString;
-        }
+    /**
+     * copy of getAvgHistoricalValues() but get max for graphs. Runs asynchronously to prevent timeouts
+     * @param filter - filter object
+     * @return a promise that resolves to a list of average maximum values
+     */
+    public CompletableFuture<List<Integer>> getAvgHistoricalMax(Filter filter) {
+        return CompletableFuture.supplyAsync(() -> {
+            String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
+                    createHistoricalFilterQueryString(filter) + "&assessment_year=";
 
-        /**
-         * Creates a query by combining all the appropriate queries as determined by the provided filter
-         *
-         * @param filter A filter object that contains the fields to be filtered for
-         * @return An amalgamated query for all the fields specified in the provided filter
-         */
-        private static String createFilterQueryString(Filter filter) {
-            StringBuilder query = new StringBuilder();
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
 
-            String neighbourhoodQuery = createNeighbourhoodQuery(filter.getNeighbourhood());
-            query.append(neighbourhoodQuery);
-
-            // adds an AND between queries only if there are previous queries added and the filter field isn't the
-            // default value of the filter field
-            if(!query.isEmpty() && !filter.getArea().isEmpty()) {
-                query.append(" and ");
+            while (year < Year.now().getValue()) {
+                String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
             }
-            String areaQuery = createAreaQuery(filter.getArea());
-            query.append(areaQuery);
+            return values;
+        });
+    }
 
-            if(!query.isEmpty() && !filter.getAssessmentClass().isEmpty()) {
-                query.append(" and ");
-            }
-            String assessClassQuery = createAssessmentClassQuery(filter.getAssessmentClass());
-            query.append(assessClassQuery);
+    /**
+     * Gets the index of a string within in an array of strings
+     *
+     * @param stringArray The array of string being searched
+     * @param str The string being searched for
+     * @return The index of the string in the array, or -1 if the string wasn't found
+     */
+    private int getHistoricalIndex(String[] stringArray, String str) {
+        return IntStream.range(0, stringArray.length)
+                .filter(i -> str.equals(stringArray[i]))
+                .findFirst()
+                .orElse(-1);
+    }
 
-            if(!query.isEmpty() && (filter.getMinimumYearBuilt() > -1 || filter.getMaximumYearBuilt() > -1)) {
-                query.append(" and ");
-            }
-            String yearRange = createYearBuiltRangeQuery(filter.getMinimumYearBuilt(), filter.getMaximumYearBuilt());
-            query.append(yearRange);
+    /**
+     * Creates a formatted URL Query
+     *
+     * @param urlQuery the query to be formatted
+     * @return a formatted URL Query
+     */
+    private String createHistoricalUrl(String urlQuery) {
+        String[] queryArray = urlQuery.split("&");
+        StringBuilder url = new StringBuilder(historicalApiEndpoint);
 
-            return query.toString();
-        }
+        for (String subQuery: queryArray) {
+            // avoids encoding '=' and '&' characters since that was causing issues when sending the queries
+            int equalIndex = subQuery.indexOf('=');
+            url.append(subQuery, 0, equalIndex + 1).append(URLEncoder.encode(subQuery.substring(equalIndex + 1), StandardCharsets.UTF_8));
 
-        /**
-         * get a list of average property values for the past 10 years using a given filter. Runs asynchronously
-         *
-         * @param filter A filter object that contains the fields to be filtered for
-         * @return A promise that resolves to a list of integers,
-         *         where List[i] is the average value of filtered properties 10 - i years ago
-         */
-        public static CompletableFuture<List<Integer>> getAvgHistoricalValues(Filter filter) {
-            return CompletableFuture.supplyAsync(() -> {
-                String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
-                        createFilterQueryString(filter) + "&assessment_year=";
-
-                List<Integer> values = new ArrayList<>();
-                int year = Year.now().getValue() - 11;
-
-                while (year < Year.now().getValue()) {
-                    String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
-                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1) ;
-                    year++;
-                }
-                return values;
-            });
-        }
-
-        /**
-         * copy of getAvgHistoricalValues() but get min for graphs. Runs asynchronously to prevent timeouts
-         * @param filter -  filter object
-         * @return a promise that resolves to a list of average minimum values
-         */
-        public static CompletableFuture<List<Integer>> getAvgHistoricalMin(Filter filter) {
-            return CompletableFuture.supplyAsync(() -> {
-                String query = "?$$app_token=" + appToken + "&$select=min(assessed_value)&$where=" +
-                        createFilterQueryString(filter) + "&assessment_year=";
-
-                int year = Year.now().getValue() - 11;
-                List<Integer> values = new ArrayList<>();
-
-                while (year < Year.now().getValue()) {
-                    String[] response = callEndpoint(query + year +" AND assessed_value > 50000").replaceAll("\"", "").split("\n");
-                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                    year++;
-                }
-                return values;
-            });
-        }
-
-        /**
-         * copy of getAvgHistoricalValues() but get max for graphs. Runs asynchronously to prevent timeouts
-         * @param filter - filter object
-         * @return a promise that resolves to a list of average maximum values
-         */
-        public static CompletableFuture<List<Integer>> getAvgHistoricalMax(Filter filter) {
-            return CompletableFuture.supplyAsync(() -> {
-                String query = "?$$app_token=" + appToken + "&$select=max(assessed_value)&$where=" +
-                        createFilterQueryString(filter) + "&assessment_year=";
-
-                int year = Year.now().getValue() - 11;
-                List<Integer> values = new ArrayList<>();
-
-                while (year < Year.now().getValue()) {
-                    String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
-                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                    year++;
-                }
-                return values;
-            });
-        }
-
-        /**
-         * Gets the index of a string within in an array of strings
-         *
-         * @param stringArray The array of string being searched
-         * @param str The string being searched for
-         * @return The index of the string in the array, or -1 if the string wasn't found
-         */
-        private static int getIndex(String[] stringArray, String str) {
-            return IntStream.range(0, stringArray.length)
-                    .filter(i -> str.equals(stringArray[i]))
-                    .findFirst()
-                    .orElse(-1);
-        }
-
-        /**
-         * Creates a formatted URL Query
-         *
-         * @param urlQuery the query to be formatted
-         * @return a formatted URL Query
-         */
-        private static String createUrl(String urlQuery) {
-            String[] queryArray = urlQuery.split("&");
-            StringBuilder url = new StringBuilder(historicalApiEndpoint);
-
-            for (String subQuery: queryArray) {
-                // avoids encoding '=' and '&' characters since that was causing issues when sending the queries
-                int equalIndex = subQuery.indexOf('=');
-                url.append(subQuery, 0, equalIndex + 1).append(URLEncoder.encode(subQuery.substring(equalIndex + 1), StandardCharsets.UTF_8));
-
-                if (getIndex(queryArray, subQuery) != queryArray.length - 1){
-                    url.append("&");
-                }
-            }
-
-            return url.toString();
-        }
-
-        /**
-         * Makes queries to the historical data API
-         * @param query The query to be made to the historical data API
-         * @return the response from the API
-         */
-        private static String callEndpoint(String query) {
-            String url = createUrl(query);
-
-            HttpClient client = HttpClient.newHttpClient();
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
-
-            try{
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                return response.body();
-            } catch (IOException | InterruptedException e){
-                return "";
+            if (getHistoricalIndex(queryArray, subQuery) != queryArray.length - 1){
+                url.append("&");
             }
         }
 
-        /**
-         * Gets a list of historical assessment values of a specified property assessment. Runs asynchronously to
-         * reduce timeouts
-         * @param account_number The account number of the specific property assessment
-         * @return a promise that resolves to a list of assessed property values for each year
-         */
-        public static CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number) {
-            return CompletableFuture.supplyAsync(() -> {
-                String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" +
-                                account_number + "' and assessment_year='";
+        return url.toString();
+    }
 
-                int year = Year.now().getValue() - 11;
-                List<Integer> values = new ArrayList<>();
+    /**
+     * Makes queries to the historical data API
+     * @param query The query to be made to the historical data API
+     * @return the response from the API
+     */
+    private String callEndpoint(String query) {
+        String url = createHistoricalUrl(query);
 
-                while (year < Year.now().getValue()) {
-                    String newQuery = query + year + "'";
-                    String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
-                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                    year++;
-                }
-                return values;
-            });
-        }
+        HttpClient client = HttpClient.newHttpClient();
 
-        /**
-         * Gets the average lot size of filtered property assessments
-         * @param filter the filter for how filter the property assessments
-         * @return the average lot size of the filtered property assessments
-         */
-        public static int averageLotSize(Filter filter) { return lotSize("avg", filter); }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
 
-        /**
-         * Gets the largest lot size of filtered property assessments
-         * @param filter the filter for how filter the property assessments
-         * @return the average lot size of the filtered property assessments
-         */
-        public static int maxLotSize(Filter filter) { return lotSize("max", filter); }
-
-        /**
-         * Gets the smallest lot size of filtered property assessments
-         * @param filter the filter for how filter the property assessments
-         * @return the average lot size of the filtered property assessments
-         */
-        public static int minLotSize(Filter filter) { return lotSize("min", filter); }
-
-        /**
-         * Gets the specified lot size statistic of filtered property assessments
-         *
-         * @param minMaxAverage the type of static to get
-         *                      The lost size statistics are as follows:
-         *                          max: the largest lot size
-         *                          min: the smallest lot size
-         *                          avg: the average lot size
-         * @param filter the filter for how filter the property assessments
-         * @return the specified lot size statistic lot size of the filtered property assessments
-         */
-        private static int lotSize(String minMaxAverage, Filter filter) {
-            StringBuilder query = new StringBuilder("?$$app_token=")
-                    .append(appToken)
-                    .append("&$select=")
-                    .append(minMaxAverage)
-                    .append("(lot_size) where ")
-                    .append("assessment_year='")
-                    .append((Year.now().getValue() - 1))
-                    .append("'");
-
-
-            String filterQuery = createFilterQueryString(filter);
-
-            if(!filterQuery.isEmpty()) {
-                query.append(" AND ").append(createFilterQueryString(filter));
-            }
-
-            String[] response = callEndpoint(query.toString()).replaceAll("\"", "").split("\n");
-
-
-            try{
-                return (int) Double.parseDouble(response[1]);
-            } catch (NumberFormatException error) {
-                return -1;
-            }
+        try{
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body();
+        } catch (IOException | InterruptedException e){
+            return "";
         }
     }
 
     /**
-     * Gets the average historical value of all properties after applying a given filter
-     *
-     * @param filter a filter object that specifies the fields to filter by
-     * @return the average value of all property assessment found after filtering, or -1 if no results were found
+     * Gets a list of historical assessment values of a specified property assessment. Runs asynchronously to
+     * reduce timeouts
+     * @param account_number The account number of the specific property assessment
+     * @return a promise that resolves to a list of assessed property values for each year
      */
-    public int getAvgHistoricalValue(Filter filter) {
+    public CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number) {
+        return CompletableFuture.supplyAsync(() -> {
+            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" +
+                            account_number + "' and assessment_year='";
 
-        //TODO: create separate method for building this query string, (column names are slightly different)
-        String filterQuery = createFilterQueryString(filter);
+            int year = Year.now().getValue() - 11;
+            List<Integer> values = new ArrayList<>();
 
-        // historical data has 4.2 million rows, searching them without any filter will almost certainly cause a timeout
-        if (filterQuery.isEmpty())
+            while (year < Year.now().getValue()) {
+                String newQuery = query + year + "'";
+                String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                year++;
+            }
+            return values;
+        });
+    }
+
+    /**
+     * Gets the average lot size of filtered property assessments
+     * @param filter the filter for how filter the property assessments
+     * @return the average lot size of the filtered property assessments
+     */
+    public int averageLotSize(Filter filter) { return lotSize("avg", filter); }
+
+    /**
+     * Gets the largest lot size of filtered property assessments
+     * @param filter the filter for how filter the property assessments
+     * @return the average lot size of the filtered property assessments
+     */
+    public int maxLotSize(Filter filter) { return lotSize("max", filter); }
+
+    /**
+     * Gets the smallest lot size of filtered property assessments
+     * @param filter the filter for how filter the property assessments
+     * @return the average lot size of the filtered property assessments
+     */
+    public int minLotSize(Filter filter) { return lotSize("min", filter); }
+
+    /**
+     * Gets the specified lot size statistic of filtered property assessments
+     *
+     * @param minMaxAverage the type of static to get
+     *                      The lost size statistics are as follows:
+     *                          max: the largest lot size
+     *                          min: the smallest lot size
+     *                          avg: the average lot size
+     * @param filter the filter for how filter the property assessments
+     * @return the specified lot size statistic lot size of the filtered property assessments
+     */
+    private int lotSize(String minMaxAverage, Filter filter) {
+        StringBuilder query = new StringBuilder("?$$app_token=")
+                .append(appToken)
+                .append("&$select=")
+                .append(minMaxAverage)
+                .append("(lot_size) where ")
+                .append("assessment_year='")
+                .append((Year.now().getValue() - 1))
+                .append("'");
+
+
+        String filterQuery = createHistoricalFilterQueryString(filter);
+
+        if(!filterQuery.isEmpty()) {
+            query.append(" AND ").append(createHistoricalFilterQueryString(filter));
+        }
+
+        String[] response = callEndpoint(query.toString()).replaceAll("\"", "").split("\n");
+
+        try{
+            return (int) Double.parseDouble(response[1]);
+        } catch (NumberFormatException error) {
             return -1;
-
-        String result = getData("?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" + filterQuery);
-        String[] values = result.replaceAll("\"", "").split("\n");
-
-        return (values.length > 1) ? Math.round( Float.parseFloat(values[1]) ) : -1;
-
+        }
     }
 }

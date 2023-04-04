@@ -24,7 +24,6 @@ import javafx.stage.Stage;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -240,6 +239,9 @@ public class PropertyAssessmentApplication extends Application {
      * @return A formatted string of the property's lot size (comma separated), followed by m^2
      */
     private String lotSizeString(int value) {
+        if (value < 0) {
+            return "No Data Found";
+        }
         DecimalFormat formatter = new DecimalFormat("#,###");
         return formatter.format(value) + " m²";
     }
@@ -254,9 +256,9 @@ public class PropertyAssessmentApplication extends Application {
         String maxValueString = valueString((int) propertyAssessmentDAO.max(filter));
         String averageValueString = valueString((int) propertyAssessmentDAO.average(filter));
 
-        String minLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.minLotSize(filter));
-        String maxLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.maxLotSize(filter));
-        String averageLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.averageLotSize(filter));
+        String minLotSizeString = lotSizeString(propertyAssessmentDAO.minLotSize(filter));
+        String maxLotSizeString = lotSizeString(propertyAssessmentDAO.maxLotSize(filter));
+        String averageLotSizeString = lotSizeString(propertyAssessmentDAO.averageLotSize(filter));
 
         minValueText.setText(minValueString);
         maxValueText.setText(maxValueString);
@@ -728,8 +730,7 @@ public class PropertyAssessmentApplication extends Application {
 
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
-        CompletableFuture<List<Integer>> historicalValues =
-                ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+        CompletableFuture<List<Integer>> historicalValues = propertyAssessmentDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
 
         specificGUpdate(historicalValues);
 
@@ -887,35 +888,31 @@ public class PropertyAssessmentApplication extends Application {
         series1.setName("Average Value");
 
         Filter filter = buildFilter();
-        CompletableFuture<List<Integer>> futureAvgs = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
+        CompletableFuture<List<Integer>> futureAvgs = propertyAssessmentDAO.getAvgHistoricalValues(filter);
 
-        futureAvgs.thenAccept( vals -> {
-            Platform.runLater(() -> {
-                for(int i=0; i < 11; i++){
-                    series1.getData().add(
-                            new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
-                    );
-                }
-            });
-        });
+        futureAvgs.thenAccept( vals -> Platform.runLater(() -> {
+            for(int i=0; i < 11; i++){
+                series1.getData().add(
+                        new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
+                );
+            }
+        }));
 
         XYChart.Series series2 = new XYChart.Series();
         series2.setName("Minimum Value");
 
-        CompletableFuture<List<Integer>> futureMins = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
-        futureMins.thenAccept( vals -> {
-            Platform.runLater(() -> {
-                for(int i=0; i < 11; i++){
-                    series2.getData().add(
-                            new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
-                    );
-                }
-            });
-        });
+        CompletableFuture<List<Integer>> futureMins = propertyAssessmentDAO.getAvgHistoricalMin(filter);
+        futureMins.thenAccept( vals -> Platform.runLater(() -> {
+            for(int i=0; i < 11; i++){
+                series2.getData().add(
+                        new XYChart.Data(Integer.toString((2012+i)), (((float)vals.get(i)/(float)vals.get(0))-1)*100)
+                );
+            }
+        }));
 
         XYChart.Series series3 = new XYChart.Series();
         series3.setName("Maximum Value");
-        CompletableFuture<List<Integer>> futureMaxs = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
+        CompletableFuture<List<Integer>> futureMaxs = propertyAssessmentDAO.getAvgHistoricalMax(filter);
         futureMaxs.thenAccept( vals -> {
             Platform.runLater(() -> {
                 for(int i=0; i < 11; i++){
@@ -939,12 +936,10 @@ public class PropertyAssessmentApplication extends Application {
         XYChart.Series series1 = new XYChart.Series();
         series1.setName("Value");
 
-        historicalVals.thenAccept( vals -> {
-            Platform.runLater(() -> {
-                for(int i=0; i < 11; i++)
-                    series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)vals.get(i)));
-            });
-        });
+        historicalVals.thenAccept( vals -> Platform.runLater(() -> {
+            for(int i=0; i < 11; i++)
+                series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)vals.get(i)));
+        }));
 
         this.graph2.getData().addAll(series1);
     }

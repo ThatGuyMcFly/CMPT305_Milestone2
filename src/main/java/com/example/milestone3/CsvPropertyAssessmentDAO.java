@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -193,17 +191,62 @@ public class CsvPropertyAssessmentDAO implements PropertyAssessmentDAO{
 
     @Override
     public double max(Filter filter) {
-        return 0;
+        return propertyAssessments.stream()
+                .map(PropertyAssessment::getAssessedValue)
+                .max(Comparator.naturalOrder())
+                .orElse(-1);
     }
 
     @Override
     public double min(Filter filter) {
-        return 0;
+        return propertyAssessments.stream()
+                .map(PropertyAssessment::getAssessedValue)
+                .min(Comparator.naturalOrder())
+                .orElse(-1);
     }
 
     @Override
     public double average(Filter filter) {
-        return 0;
+        return propertyAssessments.stream()
+                .mapToDouble(PropertyAssessment::getAssessedValue)
+                .average()
+                .orElse(-1);
+
+    }
+
+    @Override
+    public CompletableFuture<List<Integer>> getAvgHistoricalValues(Filter filter) {
+        return new CompletableFuture<>();
+    }
+
+    @Override
+    public CompletableFuture<List<Integer>> getAvgHistoricalMin(Filter filter) {
+        return new CompletableFuture<>();
+    }
+
+    @Override
+    public CompletableFuture<List<Integer>> getAvgHistoricalMax(Filter filter) {
+        return new CompletableFuture<>();
+    }
+
+    @Override
+    public CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number) {
+        return new CompletableFuture<>();
+    }
+
+    @Override
+    public int averageLotSize(Filter filter) {
+        return -1;
+    }
+
+    @Override
+    public int maxLotSize(Filter filter) {
+        return -1;
+    }
+
+    @Override
+    public int minLotSize(Filter filter) {
+        return -1;
     }
 
     /**
