@@ -20,9 +20,14 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class PropertyAssessmentApplication extends Application {
     private ObservableList<PropertyAssessment> propertyAssessments;
@@ -215,12 +220,26 @@ public class PropertyAssessmentApplication extends Application {
     }
 
     /**
-     * Returns the string value of an integer if greater than or equal to 0, or the string 'No Data Found'
+     * Returns a currency formatted string of an integer if greater than or equal to 0, or the string 'No Data Found'
      * @param value The integer to be converted to a string
      * @return the string value of an integer or 'No Data Found' if value less than 0
      */
     private String valueString(int value) {
-        return value >= 0 ? Integer.toString(value) : "No Data Found";
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.CANADA);
+        currencyFormat.setRoundingMode(RoundingMode.HALF_UP);
+        currencyFormat.setMaximumFractionDigits(0);
+
+        return value >= 0 ? currencyFormat.format(value) : "No Data Found";
+    }
+
+    /**
+     * Return a formatted string of an integer representing a property's lot size
+     * @param value The property's lot size (in sq meters)
+     * @return A formatted string of the property's lot size (comma separated), followed by m^2
+     */
+    private String lotSizeString(int value) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(value) + " m²";
     }
 
     /**
@@ -233,9 +252,9 @@ public class PropertyAssessmentApplication extends Application {
         String maxValueString = valueString((int) propertyAssessmentDAO.max(filter));
         String averageValueString = valueString((int) propertyAssessmentDAO.average(filter));
 
-        String minLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.minLotSize(filter));
-        String maxLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.maxLotSize(filter));
-        String averageLotSizeString = valueString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.averageLotSize(filter));
+        String minLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.minLotSize(filter));
+        String maxLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.maxLotSize(filter));
+        String averageLotSizeString = lotSizeString(ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.averageLotSize(filter));
 
         minValueText.setText(minValueString);
         maxValueText.setText(maxValueString);
@@ -863,15 +882,16 @@ public class PropertyAssessmentApplication extends Application {
         Filter filter = buildFilter();
         List<Integer> hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalValues(filter);
 
+
         XYChart.Series series1 = new XYChart.Series();
-        series1.setName("AVG Value");
+        series1.setName("Average Value");
 
         for(int i=0; i < 11; i++){
             series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
         }
 
         XYChart.Series series2 = new XYChart.Series();
-        series2.setName("Min Value");
+        series2.setName("Minimum Value");
 
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMin(filter);
         for(int i=0; i < 11; i++){
@@ -879,7 +899,7 @@ public class PropertyAssessmentApplication extends Application {
         }
 
         XYChart.Series series3 = new XYChart.Series();
-        series3.setName("Max Value");
+        series3.setName("Maximum Value");
         hist = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getAvgHistoricalMax(filter);
         for(int i=0; i < 11; i++){
             series3.getData().add(new XYChart.Data(Integer.toString((2012+i)), (((float)hist.get(i)/(float)hist.get(0))-1)*100));
