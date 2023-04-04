@@ -726,7 +726,9 @@ public class PropertyAssessmentApplication extends Application {
 
         currentInformationVBox.prefWidthProperty().bind(propertyAssessmentVBox.widthProperty());
 
-        List<Integer> historicalValues = ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+        CompletableFuture<List<Integer>> historicalValues =
+                ApiPropertyAssessmentDAO.HistoricalAssessmentsDAO.getHistoricalPropertyValuesByAccountNumber(propertyAssessment.getAccountNumber());
+
         specificGUpdate(historicalValues);
 
         return new VBox(propertyAssessmentHeader, currentInformationVBox, graph2);
@@ -927,17 +929,20 @@ public class PropertyAssessmentApplication extends Application {
 
     /**
      * update specific graph on page open
-     * @param hist
+     * @param historicalVals a promise that resolves to a list of property values used to poopulate the graph
      */
-    private void specificGUpdate(List<Integer> hist){
+    private void specificGUpdate(CompletableFuture<List<Integer>> historicalVals){
         this.graph2.getData().clear();
 
         XYChart.Series series1 = new XYChart.Series();
         series1.setName("Value");
 
-        for(int i=0; i < 11; i++){
-            series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)hist.get(i)));
-        }
+        historicalVals.thenAccept( vals -> {
+            Platform.runLater(() -> {
+                for(int i=0; i < 11; i++)
+                    series1.getData().add(new XYChart.Data(Integer.toString((2012+i)), (float)vals.get(i)));
+            });
+        });
 
         this.graph2.getData().addAll(series1);
     }

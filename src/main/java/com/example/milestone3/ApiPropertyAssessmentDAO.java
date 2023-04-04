@@ -643,24 +643,27 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         }
 
         /**
-         * Gets a list of historical assessment values of a specified property assessment
+         * Gets a list of historical assessment values of a specified property assessment. Runs asynchronously to
+         * reduce timeouts
          * @param account_number The account number of the specific property assessment
-         * @return a list of historical assessment values where years without data are stored as -1
+         * @return a promise that resolves to a list of assessed property values for each year
          */
-        public static List<Integer> getHistoricalPropertyValuesByAccountNumber(int account_number) {
-            String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" + account_number + "' and assessment_year='";
+        public static CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number) {
+            return CompletableFuture.supplyAsync(() -> {
+                String query = "?$$app_token=" + appToken + "&$select=assessed_value where account_number='" +
+                                account_number + "' and assessment_year='";
 
-            int year = Year.now().getValue() - 11;
-            List<Integer> values = new ArrayList<>();
+                int year = Year.now().getValue() - 11;
+                List<Integer> values = new ArrayList<>();
 
-            while (year < Year.now().getValue()) {
-                String newQuery = query + year + "'";
-                String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
-                year++;
-            }
-
-            return values;
+                while (year < Year.now().getValue()) {
+                    String newQuery = query + year + "'";
+                    String[] response = callEndpoint(newQuery).replaceAll("\"", "").split("\n");
+                    values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                    year++;
+                }
+                return values;
+            });
         }
 
         /**
