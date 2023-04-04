@@ -523,14 +523,15 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             String query = "?$$app_token=" + appToken + "&$select=avg(assessed_value)&$where=" +
                             createFilterQueryString(filter) + "&assessment_year=";
 
-            int year = Year.now().getValue() - 11;
             List<Integer> values = new ArrayList<>();
+            int year = Year.now().getValue() - 11;
 
             while (year < Year.now().getValue()) {
                 String[] response = callEndpoint(query + year).replaceAll("\"", "").split("\n");
-                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1);
+                values.add( response.length > 1 ? Math.round(Float.parseFloat(response[1])) : -1) ;
                 year++;
             }
+
             return values;
         }
 
@@ -619,8 +620,6 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
         private static String callEndpoint(String query) {
             String url = createUrl(query);
 
-            System.out.println(url);
-
             HttpClient client = HttpClient.newHttpClient();
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -705,8 +704,6 @@ public class ApiPropertyAssessmentDAO implements PropertyAssessmentDAO{
             if(!filterQuery.isEmpty()) {
                 query.append(" AND ").append(createFilterQueryString(filter));
             }
-
-            System.out.println(query);
 
             String[] response = callEndpoint(query.toString()).replaceAll("\"", "").split("\n");
 
