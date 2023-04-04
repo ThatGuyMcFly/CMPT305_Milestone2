@@ -63,6 +63,7 @@ public class PropertyAssessmentApplication extends Application {
         HBox mainHBox = new HBox(10);
         mainHBox.setPadding(new Insets(10, 10, 10, 10));
         mainScene = new Scene(mainHBox, 1500, 1000);
+        mainHBox.setStyle("-fx-background-color: #FFF5EB");
         this.primaryStage.setScene(mainScene);
 
         dataFont = Font.font("Arial", 20);
@@ -741,7 +742,7 @@ public class PropertyAssessmentApplication extends Application {
     private void showProperty(PropertyAssessment propertyAssessment) {
         VBox propertyAssessmentVBox = createPropertyAssessmentVBox(propertyAssessment);
         Scene propertyAssessmentScene = new Scene(propertyAssessmentVBox, mainScene.getWidth(), mainScene.getHeight());
-
+        propertyAssessmentVBox.setStyle("-fx-background-color: #FFF5EB");
         primaryStage.setScene(propertyAssessmentScene);
     }
 
