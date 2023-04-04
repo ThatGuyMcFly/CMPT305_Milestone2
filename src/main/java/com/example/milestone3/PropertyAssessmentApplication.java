@@ -239,6 +239,9 @@ public class PropertyAssessmentApplication extends Application {
      * @return A formatted string of the property's lot size (comma separated), followed by m^2
      */
     private String lotSizeString(int value) {
+        if (value < 0) {
+            return "No Data Found";
+        }
         DecimalFormat formatter = new DecimalFormat("#,###");
         return formatter.format(value) + " m²";
     }
