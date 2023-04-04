@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 public class PropertyAssessmentApplication extends Application {
     private ObservableList<PropertyAssessment> propertyAssessments;
