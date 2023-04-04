@@ -667,7 +667,8 @@ public class PropertyAssessmentApplication extends Application {
     private VBox createCurrentDataVBox(PropertyAssessment propertyAssessment) {
         Label currentDataLabel = createLabel("Current Data", headingFont);
 
-        VBox currentValueVBox = createDataVBox("Current Value", "$" + propertyAssessment.getAssessedValue());
+        String formattedValue = valueString(propertyAssessment.getAssessedValue());
+        VBox currentValueVBox = createDataVBox("Current Value", formattedValue);
 
         return new VBox(currentDataLabel, currentValueVBox);
     }
