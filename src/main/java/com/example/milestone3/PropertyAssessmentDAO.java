@@ -2,6 +2,7 @@ package com.example.milestone3;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public interface PropertyAssessmentDAO {
     PropertyAssessment getByAccountNumber(int accountNumber);
@@ -16,5 +17,12 @@ public interface PropertyAssessmentDAO {
     double max(Filter filter);
     double min(Filter filter);
     double average(Filter filter);
-    class HistoricalAssessmentsDAO{}
+
+    CompletableFuture<List<Integer>> getAvgHistoricalValues(Filter filter);
+    CompletableFuture<List<Integer>> getAvgHistoricalMin(Filter filter);
+    CompletableFuture<List<Integer>> getAvgHistoricalMax(Filter filter);
+    CompletableFuture<List<Integer>> getHistoricalPropertyValuesByAccountNumber(int account_number);
+    int averageLotSize(Filter filter);
+    int maxLotSize(Filter filter);
+    int minLotSize(Filter filter);
 }
